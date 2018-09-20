@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Initialize a Domain</h1>
+<form action="" method="post" novalidate>
+  {{ form.hidden_tag() }}
+
+  <p>
+    {{ form.domain_top_dir.label }}
+    {{ form.domain_top_dir(size=32) }}
+    <br>
+    {{ form.domain_config.label }}
+    {{ form.domain_config(size=32) }}
+    <br>
+    {{ form.compatible_version.label }}
+    {{ form.compatible_version(size=32) }}
+    <br>
+    {{ form.hydro_namelist_patch_file.label }}
+    {{ form.hydro_namelist_patch_file(size=32) }}
+    <br>
+    {{ form.hrldas_namelist_patch_file.label }}
+    {{ form.hrldas_namelist_patch_file(size=32) }}        
+  </p>
+  
+  <p>{{ form.submit() }}</p>
+  
+</form>
+{% endblock %}
