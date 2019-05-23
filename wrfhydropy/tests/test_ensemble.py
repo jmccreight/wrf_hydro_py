@@ -184,9 +184,15 @@ def test_ens_parallel_compose(simulation_compiled, job_restart, scheduler, tmpdi
                 'canopy_stomatal_resistance_option': 1,
                 'hrldas_setup_file': './NWM/DOMAIN/wrfinput_d01.nc',
                 'indir': './FORCING',
+                'khour': 36,
+                'output_timestep': 86400,
                 'restart_filename_requested': './NWM/RESTART/RESTART.2011082600_DOMAIN1',
                 'restart_frequency_hours': 24,
-                'output_timestep': 86400
+                'start_day': 4,
+                'start_hour': 0,
+                'start_min': 0,
+                'start_month': 7,
+                'start_year': 1776
             },
             'wrf_hydro_offline': {
                 'forc_typ': 1

@@ -103,10 +103,10 @@ class Job(object):
             self._restart_dir_hydro = pathlib.Path(self.restart_dir)
             self._restart_dir_hrldas = pathlib.Path(self.restart_dir)
         elif isinstance(self.restart_dir, dict):
-            self._restart_dir_hydro = pathlib.Path(self.restart_file_time['hydro'])
-            self._restart_dir_hrldas = pathlib.Path(self.restart_file_time['hrldas'])
+            self._restart_dir_hydro = pathlib.Path(self.restart_dir['hydro'])
+            self._restart_dir_hrldas = pathlib.Path(self.restart_dir['hrldas'])
         else:
-            raise ValueError("restart_file_time is an in appropriate type.")
+            raise ValueError("restart_file_time is not an appropriate type.")
 
         self._model_start_time = pd.to_datetime(model_start_time)
         """np.datetime64: The model time at the start of the execution."""
@@ -124,10 +124,12 @@ class Job(object):
                 restart_freq_hr_hrldas = restart_freq_hr['hrldas']
             else:
                 restart_freq_hr_hrldas = None
-
-        else:
+        elif isinstance(restart_freq_hr, int) or restart_freq_hr is None:
             restart_freq_hr_hydro = restart_freq_hr
             restart_freq_hr_hrldas = restart_freq_hr
+        else:
+            raise ValueError("restart_freq_hr is not an appropriate type.")
+
 
         self.restart_freq_hr_hydro = restart_freq_hr_hydro
         """int: Hydro restart write frequency in hours."""

@@ -1,9 +1,9 @@
 import os
 import pathlib
-
 from pandas import Timestamp
+import pytest 
 
-from wrfhydropy.core.job import Job
+from wrfhydropy import Simulation, Job
 from wrfhydropy.core.namelist import Namelist
 
 
@@ -48,11 +48,78 @@ def test_job_init():
     }
 
 
-def test_job_hydro_namelist():
+test_data = [
+    (None, [None] * 3),
+    ('.', ['.', pathlib.Path('.'), pathlib.Path('.')]),
+    (pathlib.Path('.'), [pathlib.Path('.')] * 3),
+    ({'hrldas': 'hrldas', 'hydro': 'hydro'},
+     [{'hrldas': 'hrldas', 'hydro': 'hydro'}, pathlib.Path('hrldas'), pathlib.Path('hydro')]),
+    (-99999, ['restart_file_time is not an appropriate type.'])
+]
+@pytest.mark.parametrize("restart_dir,expected", test_data)
+def test_job_init_restart_dir(restart_dir, expected):
+    try:
+        job = Job(
+            job_id='test_job_1',
+            model_start_time='1984-10-14',
+            model_end_time='2017-01-04',
+            restart=False,
+            exe_cmd='bogus exe cmd',
+            entry_cmd='bogus entry cmd',
+            exit_cmd='bogus exit cmd',
+            restart_dir=restart_dir
+        )
+        result = [job.restart_dir, job._restart_dir_hrldas, job._restart_dir_hydro]
+    except Exception as e:
+        result = [str(e)]
+    assert result == expected
+
+
+test_data = [
+    (24, [24, 24]),
+    ({'hrldas': 12, 'hydro': 24}, [12, 24]),
+    ('bad', ['restart_freq_hr is not an appropriate type.'])
+]
+@pytest.mark.parametrize("restart_freq_hr,expected", test_data)
+def test_job_init_restart_freq_hr(restart_freq_hr, expected):
+    try:
+        job = Job(
+            job_id='test_job_1',
+            model_start_time='1984-10-14',
+            model_end_time='2017-01-04',
+            restart=False,
+            exe_cmd='bogus exe cmd',
+            entry_cmd='bogus entry cmd',
+            exit_cmd='bogus exit cmd',
+            restart_freq_hr=restart_freq_hr
+        )
+        result = [job.restart_freq_hr_hrldas, job.restart_freq_hr_hydro]
+    except Exception as e:
+        result = [str(e)]
+    assert result == expected
+
+
+test_data = [
+    ('1984-10-14', '2017-01-04', [Timestamp('1984-10-14'), Timestamp('2017-01-04')]),
+    (None, None, [Timestamp(1776, 7, 4, 0, 0), Timestamp(1776, 7, 5, 12, 0)])
+]    
+@pytest.mark.parametrize("model_start_time,model_end_time,expected", test_data)
+def test_job_hydro_namelist(
+    model,
+    domain,
+    model_start_time,
+    model_end_time,
+    expected
+):
+
+    sim = Simulation()
+    sim.add(model)
+    sim.add(domain)
+    
     job = Job(
         job_id='test_job_1',
-        model_start_time='1984-10-14',
-        model_end_time='2017-01-04',
+        model_start_time=model_start_time,
+        model_end_time=model_end_time,
         restart=False,
         exe_cmd='bogus exe cmd',
         entry_cmd='bogus entry cmd',
@@ -71,8 +138,11 @@ def test_job_hydro_namelist():
         }
     })
 
-    job._add_hydro_namelist(hydro_namelist)
-    assert job.hydro_namelist == {
+    sim.add(job)
+    sim.jobs[0]._add_hydro_namelist(hydro_namelist)
+    # job._add_hydro_namelist(hydro_namelist)
+    # assert job.hydro_namelist == {
+    assert sim.jobs[0].hydro_namelist == {
         'hydro_nlist': {
             'restart_file': None,
             'channel_option': 2,
@@ -83,6 +153,8 @@ def test_job_hydro_namelist():
             'nudginglastobsfile': None
         }
     }
+    
+    assert [sim.jobs[0].model_start_time, sim.jobs[0].model_end_time] == expected
 
 
 def test_job_hrldas_namelist():

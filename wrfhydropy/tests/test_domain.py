@@ -28,9 +28,16 @@ def test_domain_namelists(domain_dir):
 
     assert domain.hrldas_namelist_patches == {
         'noahlsm_offline':
-            {'hrldas_setup_file': './NWM/DOMAIN/wrfinput_d01.nc',
-             'restart_filename_requested': './NWM/RESTART/RESTART.2011082600_DOMAIN1',
-             'indir': './FORCING'},
+            {
+                'hrldas_setup_file': './NWM/DOMAIN/wrfinput_d01.nc',
+                'restart_filename_requested': './NWM/RESTART/RESTART.2011082600_DOMAIN1',
+                'indir': './FORCING',
+                'start_day': 4,
+                'start_hour': 0,
+                'start_min': 0,
+                'start_month': 7,
+                'start_year': 1776
+            },
         'wrf_hydro_offline': {'forc_typ': 1}}, 'hrldas_namelist JSONNamelist did not return ' \
                                                'expected dictionary for config nwm_ana'
 

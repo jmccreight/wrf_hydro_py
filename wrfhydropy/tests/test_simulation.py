@@ -43,11 +43,16 @@ def test_simulation_add_model_domain(model, domain):
              'btr_option': 1,
              'canopy_stomatal_resistance_option': 1,
              'hrldas_setup_file': './NWM/DOMAIN/wrfinput_d01.nc',
-             'restart_filename_requested':
-             './NWM/RESTART/RESTART.2011082600_DOMAIN1',
              'indir': './FORCING',
              'output_timestep': 86400,
-             'restart_frequency_hours': 24
+             'restart_frequency_hours': 24,
+             'khour': 36,
+             'restart_filename_requested': './NWM/RESTART/RESTART.2011082600_DOMAIN1',
+             'start_day': 4,
+             'start_hour': 0,
+             'start_min': 0,
+             'start_month': 7,
+             'start_year': 1776
          },
          'wrf_hydro_offline': {'forc_typ': 1}
         }
