@@ -494,8 +494,6 @@ class Job(object):
         pystr += "import os\n"
         pystr += "import pathlib\n"
 
-        pystr += "printenv\n"
-
         pystr += "# Get path of this script to set working directory\n"
         pystr += "sim_dir = pathlib.Path(__file__)\n"
         pystr += "os.chdir(str(sim_dir.parent))\n"

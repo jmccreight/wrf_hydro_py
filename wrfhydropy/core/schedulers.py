@@ -316,10 +316,10 @@ class Slurm(Scheduler):
         submit_str += "'"
 
         # Just for debugging purposes
-        print("submit_str: ", submit_str)
+        print("Job submitted (", submit_str, ")")
         # This stacks up dependent jobs in slurm in the same order as the job list
-        print(current_dir)
-        #subprocess.run(shlex.split(submit_str), cwd=str(current_dir))
+        # print(current_dir)
+        subprocess.run(shlex.split(submit_str), cwd=str(current_dir))
 
     def _write_job(self, jobs):
         """Private method to write bash slurm scripts for submitting each job """
