@@ -223,3 +223,199 @@ class PBSCheyenne(Scheduler):
     def ppn(self, value):
         self._ppn = value
 
+
+class Slurm(Scheduler):
+
+    """A Scheduler object compatible with Slurm (testing on Casper)."""
+    def __init__(
+            self,
+            account: str,
+            nproc: int,
+            nnodes: int,
+            mem: int=None,
+            ppn: int=None,
+            queue: str='regular',
+            walltime: str="12:00:00",
+            email_who: str=None,
+            email_when: str='abe'
+    ):
+        """Initialize an Slurm object.
+        Args:
+            account: The account string
+            nproc: Number of processors to request
+            nnodes: Number of nodes to request
+            ppn: Number of processors per node
+            mem: Memory in GB usage/request on node (109 for fat nodes).
+            email_who: Email address for Slurm notifications
+            email_when: Slurm email frequency options. Options include 'a' for on abort,
+            'b' for before each job, and 'e' for after each job.
+            queue: The queue to use, options are 'regular', 'premium', and 'shared'
+            walltime: The wall clock time in HH:MM:SS format, max time is 12:00:00
+        """
+
+        # Declare attributes.
+        # property construction
+        self._sim_dir = None
+        self._nproc = nproc
+        self._nnodes = nnodes
+        self._ppn = ppn
+
+        # Scheduler options dict
+        # TODO: Make this more elegant than hard coding for maintenance sake
+        self.scheduler_opts = {
+            'account':account,
+            'email_when':email_when,
+            'email_who':email_who,
+            'queue':queue,
+            'walltime':walltime,
+            'mem': mem
+        }
+
+
+    def schedule(self,jobs: list):
+        """Schedule one or more jobs using the scheduler scheduler
+            Args:
+                jobs: list of jobs to schedule
+        """
+        import subprocess
+        import shlex
+        import pathlib
+        import os
+
+        current_dir = pathlib.Path(os.curdir).absolute()
+
+        # TODO: Find a way to protect the job order so that once someone executes schedule...
+        # they can't change the order, may not be an issue except for if scheduling fails
+        # somewhere
+
+        self._write_job(jobs=jobs)
+
+        # Make lists to store slurm scripts and slurm job ids to get previous dependency
+        jids = []
+        scripts = []
+
+        submit_str = "/bin/bash -c '"
+        for job_num, option in enumerate(jobs):
+
+            # This gets the slurm script name and slurm jid for submission
+            # the obs jid is stored in a list so that the previous jid can be retrieved for
+            # dependency
+            job_id = jobs[job_num].job_id
+            scripts.append(str(jobs[job_num].job_dir) + "/job_" + job_id + ".slurm")
+            jids.append("job_" + job_id)
+
+            # If first job, schedule using hold
+            if job_num == 0:
+                submit_str += jids[job_num] + "=`sbatch --hold " + scripts[job_num] + "`; "
+            # Else schedule using job dependency on previous slurm jid
+            else:
+                submit_str += jids[job_num] + "=`sbatch -W depend=afterok:${" + jids[
+                    job_num-1] + "} " + scripts[job_num] + "`; "
+
+        submit_str += "scontrol release ${" + jids[0] + "##* };"
+        submit_str += "'"
+
+        # Just for debugging purposes
+        print("submit_str: ", submit_str)
+        # This stacks up dependent jobs in slurm in the same order as the job list
+        print(current_dir)
+        #subprocess.run(shlex.split(submit_str), cwd=str(current_dir))
+
+    def _write_job(self, jobs):
+        """Private method to write bash slurm scripts for submitting each job """
+        import copy
+        import sys
+
+        # Get the current pytohn executable to handle virtual environments in the scheduler
+        python_path = sys.executable
+
+        for job in jobs:
+            # Copy the job because the exe cmd is edited below
+            job = copy.deepcopy(job)
+
+            # Write Slurm script
+            jobstr = ""
+            jobstr += "#!/bin/sh\n"
+            jobstr += "#SBATCH --job-name={0}\n".format(job.job_id)
+            jobstr += "#SBATCH --account={0}\n".format(self.scheduler_opts['account'])
+            jobstr += "#SBATCH --partition={0}\n".format(self.scheduler_opts['queue'])
+
+            if self.scheduler_opts['email_who'] is not None:
+                jobstr += "#SBATCH --mail-user={0}\n".format(self.scheduler_opts['email_who'])
+                jobstr += "#SBATCH --mail-type={0}\n".format(self.scheduler_opts['email_when'])
+            jobstr += "\n"
+
+            jobstr += "#SBATCH --time={0}\n".format(self.scheduler_opts['walltime'])
+            jobstr += "\n"
+
+            jobstr += "#SBATCH --nodes={0}\n".format(self.nnodes)
+            jobstr += "#SBATCH --ntasks-per-node={0}\n".format(self.ppn)
+
+            if self.scheduler_opts['mem'] is not None:
+                jobstr += "#SBATCH --mem={0}\n".format(self.scheduler_opts['mem'])
+
+            jobstr += "# Not using standard error and out files to capture model output\n"
+            jobstr += "# but these files might catch output and errors from the scheduler.\n"
+            jobstr += "#SBATCH --output={0}/stdout\n".format(job.job_dir)
+            jobstr += "#SBATCH --error={0}/stderr\n".format(job.job_dir)
+            jobstr += "\n"
+
+            # End Header
+
+            #if self.scheduler_opts['queue'] == 'share':
+            #    jobstr += "export MPI_USE_ARRAY=false\n"
+
+            jobstr += "{0} run_job.py --job_id {1}\n".format(python_path, job.job_id)
+            jobstr += "exit $?\n"
+
+            pbs_file = job.job_dir.joinpath("job_" + job.job_id + ".slurm")
+            with pbs_file.open(mode='w') as f:
+                f.write(jobstr)
+
+            # Write the python run script for the job
+            # If the job exe uses "nproc" then apply the schedulers value.
+            job._exe_cmd = job._exe_cmd.format(**{'nproc':self.nproc})
+
+            job._write_run_script()
+
+    def _solve_nodes_cores(self):
+        """Private method to solve the number of nodes and cores if not all three specified"""
+
+        import math
+
+        if not self._nproc and self._nnodes and self._ppn:
+            self._nproc = self._nnodes * self._ppn
+        if not self._nnodes and self._nproc and self._ppn:
+            self._nnodes = math.ceil(self._nproc / self._ppn)
+        if not self._ppn and self._nnodes and self._nproc:
+            self._ppn = math.ceil(self._nproc / self._nnodes)
+
+        if None in [self._nproc, self._nnodes, self._ppn]:
+            raise ValueError("Not enough information to solve all of nproc, nnodes, ppn.")
+
+    @property
+    def nproc(self):
+        self._solve_nodes_cores()
+        return self._nproc
+
+    @nproc.setter
+    def nproc(self, value):
+        self._nproc = value
+
+    @property
+    def nnodes(self):
+        self._solve_nodes_cores()
+        return self._nnodes
+
+    @nnodes.setter
+    def nnodes(self, value):
+        self._nnodes = value
+
+    @property
+    def ppn(self):
+        self._solve_nodes_cores()
+        return self._ppn
+
+    @ppn.setter
+    def ppn(self, value):
+        self._ppn = value
