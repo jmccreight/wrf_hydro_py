@@ -9,4 +9,5 @@ from .core.ensemble import *
 from .core.job import *
 from .core.model import *
 from .core.simulation import *
+from .core.routelink import *
 from .util.xrcmp import xrcmp
