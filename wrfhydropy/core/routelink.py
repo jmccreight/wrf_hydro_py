@@ -17,7 +17,7 @@ class Routelink:
         else:
             raise ValueError(
                 'The index_or_gage argument is neither a str nor an int.')
-            
+
         # Subtract 1 for zero-based/python indexing
         # to_inds = self._obj.toIndex.values - 1
         from_inds = self._obj.fromIndices.values - 1
