@@ -126,11 +126,42 @@ class Routelink:
     def get_outlet_id(self, *args, **kwargs):
         return self.ind_to_id(self.get_outlet_ind(*args, **kwargs))
 
+    def id_to_gage(self, id_in: int):
+        return self.ind_to_gage(self.id_to_ind(id_in))
+
+    def ids_to_gages(self, ids_in: list, drop_missing: bool = True):
+        ret_val = self.inds_to_gages(
+            self.ids_to_inds(ids_in), drop_missing=drop_missing)
+        if drop_missing:
+            ret_ids = self.inds_to_ids(ret_val[0])
+            return (ret_ids, ret_val[1])
+        else:
+            return ret_val
+
+    def ind_to_gage(self, ind_in: int):
+        if not isinstance(ind_in, (int, np.integer)):
+            raise ValueError('Input argument must be integer.')
+        return self._obj['gages'].isel(feature_id=ind_in).values.tolist()
+
+    def inds_to_gages(self, ind_in: list, drop_missing: bool = True):
+        if isinstance(ind_in, (int, np.integer)):
+            ind_in = list(ind_in)
+        elif not isinstance(ind_in, list):
+            raise ValueError('Input argument must be list or integer.')
+        gage_list = [self.ind_to_gage(ii) for ii in ind_in]
+        if drop_missing:
+            gage_inds = [ii for ii in range(len(ind_in))
+                         if gage_list[ii] != missing_gage]
+            gage_list = [gg for gg in gage_list if gg != missing_gage]
+            return (gage_inds, gage_list)
+        else:
+            return gage_list
+
     # def get_gages_above(self, inds, keep_vars=['gages', 'feature_id']):
     # get all gages above,
     # for all gages find the first downstream gage
 
-    # def get_gage_below(self, inds, keep_vars=['gages', 'feature_id']):
+    # def get_gage_below(self, inds, keep_vars=['gages', 'feature_id']):        
 
     def get_gages_from_inds(self, inds, keep_vars=['gages', 'feature_id']):
         asdf

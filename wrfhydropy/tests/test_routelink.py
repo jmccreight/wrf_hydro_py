@@ -161,8 +161,32 @@ assert rl.routelink.get_outlet_id(headwater_id, id_in=True) == outlet_id
 assert rl.routelink.get_outlet_ind(outlet_id, id_in=True) == outlet_ind
 assert rl.routelink.get_outlet_id(outlet_id, id_in=True) == outlet_id
 
+# ---------------------------------------------------------------------------
+# Get gages from inds
+all_inds = rl.feature_id.values.tolist()
+all_ids = rl.link.values.tolist()
 
-# Get all gages
+all_gages_check = rl.gages.values.tolist()
+all_gages_from_inds = rl.routelink.inds_to_gages(all_inds, drop_missing=False)
+assert all_gages_from_inds == all_gages_check
+all_gages_from_ids = rl.routelink.ids_to_gages(all_ids, drop_missing=False)
+assert all_gages_from_ids == all_gages_check
+
+missing_gage = b'               '
+only_gages_check = rl.gages.where(rl.gages != missing_gage, drop=True).values.tolist()
+only_gages_from_inds_drop = rl.routelink.inds_to_gages(all_inds, drop_missing=True)
+assert only_gages_from_inds_drop[1] == only_gages_check
+only_gages_from_inds_no_drop = rl.routelink.inds_to_gages(
+    only_gages_from_inds_drop[0], drop_missing=False)
+assert only_gages_from_inds_no_drop == only_gages_check
+
+only_gages_from_inds_drop = rl.routelink.ids_to_gages(all_ids, drop_missing=True)
+assert only_gages_from_ids_drop[1] == only_gages_check
+only_gages_from_ids_no_drop = rl.routelink.ids_to_gages(
+    only_gages_from_ids_drop[0], drop_missing=False)
+assert only_gages_from_ids_no_drop == only_gages_check
+
+
 
 # function to get outlet for each link
 from_ind_check = to_ind_rl_check_answer
