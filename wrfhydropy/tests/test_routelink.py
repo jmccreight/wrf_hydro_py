@@ -128,7 +128,6 @@ for key_1, val_1 in down_ind_check_max_depth_answer.items():
             rl.routelink.inds_to_ids(val_2))
 
 for max_depth in down_id_check_max_depth_answer.keys():
-
     down_id_check = {
         key: rl.routelink.get_downstream_ids(
             value, max_depth=max_depth)
@@ -147,7 +146,23 @@ for max_depth in down_id_check_max_depth_answer.keys():
             np.array(down_id_check_max_depth_answer[max_depth][key]))
 
 
+# ---------------------------------------------------------------------------
+# Get outlet
+headwater_ind = inds_check_scalar_answer['headwater']
+outlet_ind = inds_check_scalar_answer['outlet']
+headwater_id = ids_check['headwater']
+outlet_id = ids_check['outlet']
+assert rl.routelink.get_outlet_ind(headwater_ind) == outlet_ind
+assert rl.routelink.get_outlet_id(headwater_ind) == outlet_id
+assert rl.routelink.get_outlet_ind(outlet_ind) == outlet_ind
+assert rl.routelink.get_outlet_id(outlet_ind) == outlet_id
+assert rl.routelink.get_outlet_ind(headwater_id, id_in=True) == outlet_ind
+assert rl.routelink.get_outlet_id(headwater_id, id_in=True) == outlet_id
+assert rl.routelink.get_outlet_ind(outlet_id, id_in=True) == outlet_ind
+assert rl.routelink.get_outlet_id(outlet_id, id_in=True) == outlet_id
 
+
+# Get all gages
 
 # function to get outlet for each link
 from_ind_check = to_ind_rl_check_answer

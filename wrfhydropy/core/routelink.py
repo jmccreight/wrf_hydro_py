@@ -112,7 +112,28 @@ class Routelink:
             raise ValueError('Input argument must be list or integer.')
         return [self.ind_to_id(ii) for ii in ind_in]
 
+    def get_outlet_ind(self, *args, **kwargs):
+        outlet = self.trace_links(direction='down', *args, **kwargs)[1]
+        # if it is its own outlet!
+        if len(outlet) == 0:
+            if 'id_in' in kwargs and kwargs['id_in']:
+                return self.id_to_ind(args[0])
+            else:
+                return args[0]
+        else:
+            return outlet[-1]
+
+    def get_outlet_id(self, *args, **kwargs):
+        return self.ind_to_id(self.get_outlet_ind(*args, **kwargs))
+
+    # def get_gages_above(self, inds, keep_vars=['gages', 'feature_id']):
+    # get all gages above,
+    # for all gages find the first downstream gage
+
+    # def get_gage_below(self, inds, keep_vars=['gages', 'feature_id']):
+
     def get_gages_from_inds(self, inds, keep_vars=['gages', 'feature_id']):
+        asdf
         rl_sub = self._obj.drop_vars(set(self._obj.variables) - set(keep_vars))
         rl_sub['index'] = xr.DataArray(
             np.arange(len(self._obj[keep_vars[0]])), dims='feature_id')
@@ -126,7 +147,7 @@ class Routelink:
 
 
 
-
+    # get upstream gages
 
 
 
