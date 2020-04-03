@@ -11,7 +11,7 @@ class Routelink:
         self._obj = xarray_obj
         # Check that this is actually a routelink file? dimensions?
 
-    def trace_links(
+    def trace_link(
         self,
         index_or_gage,
         direction: str,
@@ -74,6 +74,24 @@ class Routelink:
         _ = all_trace_inds.remove(the_index[0])
         return (the_index, all_trace_inds)
 
+    def trace_links(
+        self,
+        index_or_gage,
+        direction: str,
+        max_depth: int = None,
+        id_in: bool = False
+    ):
+        if isinstance(index_or_gage, (str, int, np.integer)):
+            return self.trace_link(
+                index_or_gage, direction, max_depth=max_depth, id_in=id_in)
+        elif isinstance(index_or_gage, xr.DataArray):
+            index_or_gage = index_or_gage.values.tolist()
+        elif isinstance(index_or_gage, xr.DataArray):
+            index_or_gage = index_or_gage.values.tolist()
+        return [
+            self.trace_link(ii, direction, max_depth=max_depth, id_in=id_in)
+            for ii in index_or_gage]
+
     def get_upstream_inds(self, *args, **kwargs):
         return self.trace_links(direction='up', *args, **kwargs)
 
@@ -85,8 +103,9 @@ class Routelink:
         return self.trace_links(direction='down', *args, **kwargs)
 
     def get_downstream_ids(self, *args, **kwargs):
-        return self.inds_to_ids(
-            self.trace_links(direction='down', *args, **kwargs)[1])
+        inds_result = self.trace_links(direction='down', *args, **kwargs)
+        return [(self.inds_to_ids(ii[0]), self.inds_to_ids(ii[1]))
+                for ii in inds_result]
 
     def id_to_ind(self, id_in: int):
         if not isinstance(id_in, (int, np.integer)):
@@ -95,7 +114,7 @@ class Routelink:
 
     def ids_to_inds(self, id_in: list):
         if isinstance(id_in, (int, np.integer)):
-            id_in = list(id_in)
+            id_in = [id_in]
         elif not isinstance(id_in, list):
             raise ValueError('Input argument must be list or integer.')
         return [self.id_to_ind(ii) for ii in id_in]
@@ -112,19 +131,30 @@ class Routelink:
             raise ValueError('Input argument must be list or integer.')
         return [self.ind_to_id(ii) for ii in ind_in]
 
-    def get_outlet_ind(self, *args, **kwargs):
-        outlet = self.trace_links(direction='down', *args, **kwargs)[1]
-        # if it is its own outlet!
-        if len(outlet) == 0:
-            if 'id_in' in kwargs and kwargs['id_in']:
-                return self.id_to_ind(args[0])
+    def get_outlet_inds(self, index_or_gage, id_in=False):
+        # this could use a generator since only the last value is kept
+        if isinstance(index_or_gage, (int, np.integer, str)):
+            index_or_gage = [index_or_gage]
+        elif not isinstance(index_or_gage, list):
+            raise ValueError('Input argument must be list or integer.')       
+        inds = self.trace_links(index_or_gage, id_in=id_in, direction='down')
+        outlets = []
+        for ii in range(len(inds)):
+            # if it is its own outlet!
+            if len(inds[ii][1]) == 0:
+                outlets += [(inds[ii][0], inds[ii][0])]
             else:
-                return args[0]
-        else:
-            return outlet[-1]
+                outlets += [(inds[ii][0], [inds[ii][1][-1]])]
+        return outlets
 
-    def get_outlet_id(self, *args, **kwargs):
-        return self.ind_to_id(self.get_outlet_ind(*args, **kwargs))
+    def get_outlet_ids(self, index_or_gage, id_in=False):
+        inds = self.get_outlet_inds(index_or_gage, id_in=id_in)
+        outlets = []
+        for ii in range(len(inds)):
+            outlets += [
+                (self.inds_to_ids(inds[ii][0]),
+                 self.inds_to_ids(inds[ii][1]))]
+        return outlets
 
     def id_to_gage(self, id_in: int):
         return self.ind_to_gage(self.id_to_ind(id_in))
