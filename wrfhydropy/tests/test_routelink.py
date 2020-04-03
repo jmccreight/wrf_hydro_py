@@ -288,24 +288,24 @@ assert only_gages_from_ids_no_drop == only_gages_check
 # Get gages below current gage
 just_gages = rl.routelink.inds_to_gages(all_inds)
 gage_outlets = rl.routelink.get_outlet_inds(just_gages[0])
-outlets = np.unique([go[1][0]  go in gage_outlets]).tolist()
+outlets = np.unique([go[1][0] for go in gage_outlets]).tolist()
 
 outlet_gages = {}
- oo in outlets:
+for oo in outlets:
     outlet_gages[oo] = []
-     go in gage_outlets:
+    for go in gage_outlets:
         if go[1][0] == oo:
-                outlet_gages[oo] += [go[0][0]]
+            outlet_gages[oo] += [go[0][0]]
 
 # DOWNstream approach should be faster
 outlet_gages_down_gages = {
     key: {vv: rl.routelink.inds_to_gages(
                   rl.routelink.get_downstream_inds(vv)[1])[0]
-         vv in val}
-     key, val in outlet_gages.items()}
+          for vv in val}
+    for key, val in outlet_gages.items()}
 outlet_gages_down_gages = {
-    k0: {k1: v1  k1, v1 in v0.items() if v1 != []}
-     k0, v0 in outlet_gages_down_gages.items()}
+    k0: {k1: v1 for k1, v1 in v0.items() if v1 != []}
+    for k0, v0 in outlet_gages_down_gages.items()}
 
 # Could probably rely on ordering but that's sketch
 # which ever value's map produces all the other values in the list, that's the closest
