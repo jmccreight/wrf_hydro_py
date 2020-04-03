@@ -180,9 +180,10 @@ class Routelink:
             raise ValueError('Input argument must be list or integer.')
         gage_list = [self.ind_to_gage(ii) for ii in ind_in]
         if drop_missing:
-            gage_inds = [ii for ii in range(len(ind_in))
-                         if gage_list[ii] != missing_gage]
             gage_list = [gg for gg in gage_list if gg != missing_gage]
+            gage_inds = self._obj.feature_id.where(
+                self._obj.gages.isin(gage_list), drop=True).values.tolist()
+            gage_inds = [int(gg) for gg in gage_inds]
             return (gage_inds, gage_list)
         else:
             return gage_list

@@ -7,16 +7,17 @@ from wrfhydropy.core.routelink import Routelink
 rl_file = pathlib.Path(
     '/Users/james/Downloads/croton_Route_Link_fromVars.nc')
 rl = xr.open_dataset(rl_file)
+# could shorthand: rl_rl = rl.routelink
 
 # These checks were developed in tandem with visualization in
 # pywrfhydro/ipynbs/viz/routelink_map.ipynb
 
 # Try to stick to the nomenclature on the LHS
 # ind: index, is also the feature_id dimension of routelink as
-#      brought in by xarray. Singular for  scalars, plural for
+#      brought in by xarray. Singular   scalars, plural 
 #      lists/arrays.
-# id: id, identifier. in routelink this is 'link'. Singular for
-#     scalars, plural for lists/arrays. Note that 'id' is a
+# id: id, identifier. in routelink this is 'link'. Singular 
+#     scalars, plural  lists/arrays. Note that 'id' is a
 #     python intrinsic function so I try to avoid using it alone.
 # down: downstream, or "to"
 # up: upstream, or "from"
@@ -112,7 +113,7 @@ for max_depth in down_ind_check_max_depth_answer.keys():
     # scalar id passed
     down_ind_id_in_check = {
         key: [rl.routelink.get_downstream_inds(
-            intg, max_depth=max_depth, id_in=True)
+                  intg, max_depth=max_depth, id_in=True)
               for intg in value]
         for key, value in ids_check.items()}
     for key in down_ind_id_in_check.keys():
@@ -171,19 +172,19 @@ up_ind_check_max_depth_answer = {
               84, 9, 19, 59, 91, 92, 43, 98, 80, 18,
               20, 56, 57, 48, 4, 25, 27, 44])]} }
 
-for max_depth in up_ind_check_max_depth_answer.keys():
+ max_depth in up_ind_check_max_depth_answer.keys():
     up_ind_check = {
         key: rl.routelink.get_upstream_inds(
             value, max_depth=max_depth)
-        for key, value in inds_check_answer.items()}
-    for key in up_ind_check.keys():
+         key, value in inds_check_answer.items()}
+     key in up_ind_check.keys():
         assert (up_ind_check[key] ==
                 up_ind_check_max_depth_answer[max_depth][key])
     up_ind_id_in_check = {
         key: rl.routelink.get_upstream_inds(
             value, max_depth=max_depth, id_in=True)
-        for key, value in ids_check_answer.items()}
-    for key in up_ind_id_in_check.keys():
+         key, value in ids_check_answer.items()}
+     key in up_ind_id_in_check.keys():
         assert (up_ind_id_in_check[key] ==
                 up_ind_check_max_depth_answer[max_depth][key])
 
@@ -192,29 +193,29 @@ for max_depth in up_ind_check_max_depth_answer.keys():
 # id tracing -----------------------------------------------------------
 # Translate the previous test from ind to id
 down_id_check_max_depth_answer = {}
-for key_1, val_1 in down_ind_check_max_depth_answer.items():
+ key_1, val_1 in down_ind_check_max_depth_answer.items():
     down_id_check_max_depth_answer[key_1] = {}
-    for key_2, val_2 in val_1.items():
+     key_2, val_2 in val_1.items():
         down_id_check_max_depth_answer[key_1][key_2] = []
-        for ii in range(len(val_2)):
+         ii in range(len(val_2)):
             down_id_check_max_depth_answer[key_1][key_2] += [
                 (rl.routelink.inds_to_ids(val_2[ii][0]),
                  rl.routelink.inds_to_ids(val_2[ii][1]))]
 
-for max_depth in down_id_check_max_depth_answer.keys():
+ max_depth in down_id_check_max_depth_answer.keys():
     # list ind passed
     down_id_check = {
         key: rl.routelink.get_downstream_ids(value, max_depth=max_depth)
-        for key, value in inds_check_answer.items()}
-    for key in down_id_check.keys():
+         key, value in inds_check_answer.items()}
+     key in down_id_check.keys():
         assert (down_id_check[key] ==
                 down_id_check_max_depth_answer[max_depth][key])
     # list id passed
     down_id_id_in_check = {
         key: rl.routelink.get_downstream_ids(
             value, max_depth=max_depth, id_in=True)
-        for key, value in ids_check.items()}    
-    for key in down_id_id_in_check.keys():
+         key, value in ids_check.items()}    
+     key in down_id_id_in_check.keys():
         assert (down_id_id_in_check[key] ==
                 down_id_check_max_depth_answer[max_depth][key])
 
@@ -248,7 +249,7 @@ assert (rl.routelink.get_outlet_ids(outlet_id, id_in=True) ==
 # list input
 # Get all outlet gages
 all_outlets = rl.routelink.get_outlet_inds(rl.feature_id.values.tolist())
-outlet_inds = np.unique([tt[1][0] for tt in all_outlets])
+outlet_inds = np.unique([tt[1][0]  tt in all_outlets])
 assert (rl.to.isel(feature_id=outlet_inds).values == 0).all()
 # also check that these are all the zeros in the to field
 assert len(rl.where(rl.to == 0, drop=True).to) == len(outlet_inds)
@@ -270,7 +271,6 @@ only_gages_check = rl.gages.where(rl.gages != missing_gage, drop=True).values.to
 only_gages_from_inds_drop = rl.routelink.inds_to_gages(all_inds, drop_missing=True)
 assert only_gages_from_inds_drop[1] == only_gages_check
 only_gages_from_inds_no_drop = rl.routelink.inds_to_gages(
-    
     only_gages_from_inds_drop[0], drop_missing=False)
 assert only_gages_from_inds_no_drop == only_gages_check
 
@@ -281,16 +281,71 @@ only_gages_from_ids_no_drop = rl.routelink.ids_to_gages(
 assert only_gages_from_ids_no_drop == only_gages_check
 
 
+# ---------------------------------------------------------------------------
+# TODO test psasing gage to above functions.
 
-# # function to get outlet for each link
+# ---------------------------------------------------------------------------
+# Get gages below current gage
+just_gages = rl.routelink.inds_to_gages(all_inds)
+gage_outlets = rl.routelink.get_outlet_inds(just_gages[0])
+outlets = np.unique([go[1][0]  go in gage_outlets]).tolist()
+
+outlet_gages = {}
+ oo in outlets:
+    outlet_gages[oo] = []
+     go in gage_outlets:
+        if go[1][0] == oo:
+                outlet_gages[oo] += [go[0][0]]
+
+# DOWNstream approach should be faster
+outlet_gages_down_gages = {
+    key: {vv: rl.routelink.inds_to_gages(
+                  rl.routelink.get_downstream_inds(vv)[1])[0]
+         vv in val}
+     key, val in outlet_gages.items()}
+outlet_gages_down_gages = {
+    k0: {k1: v1  k1, v1 in v0.items() if v1 != []}
+     k0, v0 in outlet_gages_down_gages.items()}
+
+# Could probably rely on ordering but that's sketch
+# which ever value's map produces all the other values in the list, that's the closest
+# just keep that one. map becomes 1-1 (but repeated rhs/values)
+outlet_gages_down_gage = {}
+ k0, v0 in outlet_gages_down_gages.items():
+    outlet_gages_down_gage[k0] = {}
+     k1, v1 in v0.items():
+        if len(v1) == 1:
+            outlet_gages_down_gage[k0][k1] = v1
+        else:
+             vv in v1:
+                if vv in v0.keys():
+                    if sorted([vv] + v0[vv]) == sorted(v1):
+                        outlet_gages_down_gage[k0][k1] = [vv]
+                        break
+
+# invert the dictonary to get upstream of each ind: will be one to many 
+down_gages = {k0: np.unique([v1 for k1, v1 in v0.items()]).tolist()
+              for k0, v0 in outlet_gages_down_gage.items()}
+up_gages = {}
+for k0, v0 in outlet_gages_down_gage.items():
+    up_gages[k0] = {}
+    for gg in down_gages[k0]:
+        up_gages[k0][gg] = []
+        for k1, v1 in outlet_gages_down_gage[k0].items():
+            if gg == v1[0]:
+                up_gages[k0][gg] += [k1]
+
+affa
+
+# # function to get outlet  each link
 # from_ind_check = to_ind_rl_check_answer
 # to_ind_rl_check_answer = {
 #     key: np.where(rl.link == value)[0].tolist()
-#     for key, value in to_link_rl_check.items()}
+#      key, value in to_link_rl_check.items()}
 # to_ind_check = {
 #     key: rl.routelink.get_downstream_inds(value[0], max_depth=1)[1]
-#     for key, value in inds_check_scalar_answer.items()}
-# for key in to_ind_check.keys():
+#      key, value in inds_check_scalar_answer.items()}
+#  key in to_ind_check.keys():
 #     assert np.array_equal(
 #         np.array(to_ind_check[key]), np.array(to_ind_rl_check_answer[key]) )
 
@@ -298,7 +353,7 @@ assert only_gages_from_ids_no_drop == only_gages_check
 # # -----------------------------------------------------------------------------
 
 # all_downstream_inds = [
-#     rl.routelink.get_downstream_inds(link, max_depth=1) for link in upstream_inds[1]]
+#     rl.routelink.get_downstream_inds(link, max_depth=1)  link in upstream_inds[1]]
 
 
 # len(to_ind_check['outlet'])
@@ -308,7 +363,7 @@ assert only_gages_from_ids_no_drop == only_gages_check
 
 # trace_down_1 = {
 #     key: rl.routelink.get_downstream_inds(value[0], max_depth=1)
-#     for key, value in inds_to_check.items()}
+#      key, value in inds_to_check.items()}
 
 
 # # -----------------------------------------------------------------------------
@@ -319,11 +374,11 @@ assert only_gages_from_ids_no_drop == only_gages_check
 # upstream_inds = rl.routelink.get_upstream_inds(downstream_inds[1][0], max_depth=2)
 # # Start from the result of the previous, go back down but just one link
 # all_downstream_inds = [
-#     rl.routelink.get_downstream_inds(link, max_depth=1) for link in upstream_inds[1]]
+#     rl.routelink.get_downstream_inds(link, max_depth=1)  link in upstream_inds[1]]
 
 
 
-# #check_from = {key: rl.to[value].values for key, value in inds_to_check.items()}
+# #check_from = {key: rl.to[value].values  key, value in inds_to_check.items()}
 
 # check_to
 
@@ -335,7 +390,7 @@ assert only_gages_from_ids_no_drop == only_gages_check
 
 # # Go back up but just a bit further, bifurcating to the mainstem
 # all_downstream_inds = [
-#     rl.routelink.get_downstream_inds(link, max_depth=1) for link in upstream_inds[1]]
+#     rl.routelink.get_downstream_inds(link, max_depth=1)  link in upstream_inds[1]]
 
 
 
