@@ -311,13 +311,13 @@ outlet_gages_down_gages = {
 # which ever value's map produces all the other values in the list, that's the closest
 # just keep that one. map becomes 1-1 (but repeated rhs/values)
 outlet_gages_down_gage = {}
- k0, v0 in outlet_gages_down_gages.items():
+for k0, v0 in outlet_gages_down_gages.items():
     outlet_gages_down_gage[k0] = {}
-     k1, v1 in v0.items():
+    for k1, v1 in v0.items():
         if len(v1) == 1:
             outlet_gages_down_gage[k0][k1] = v1
         else:
-             vv in v1:
+            for vv in v1:
                 if vv in v0.keys():
                     if sorted([vv] + v0[vv]) == sorted(v1):
                         outlet_gages_down_gage[k0][k1] = [vv]
