@@ -172,19 +172,19 @@ up_ind_check_max_depth_answer = {
               84, 9, 19, 59, 91, 92, 43, 98, 80, 18,
               20, 56, 57, 48, 4, 25, 27, 44])]} }
 
- max_depth in up_ind_check_max_depth_answer.keys():
+for max_depth in up_ind_check_max_depth_answer.keys():
     up_ind_check = {
         key: rl.routelink.get_upstream_inds(
             value, max_depth=max_depth)
-         key, value in inds_check_answer.items()}
-     key in up_ind_check.keys():
+        for key, value in inds_check_answer.items()}
+    for key in up_ind_check.keys():
         assert (up_ind_check[key] ==
                 up_ind_check_max_depth_answer[max_depth][key])
     up_ind_id_in_check = {
         key: rl.routelink.get_upstream_inds(
             value, max_depth=max_depth, id_in=True)
-         key, value in ids_check_answer.items()}
-     key in up_ind_id_in_check.keys():
+        for key, value in ids_check_answer.items()}
+    for key in up_ind_id_in_check.keys():
         assert (up_ind_id_in_check[key] ==
                 up_ind_check_max_depth_answer[max_depth][key])
 
@@ -193,29 +193,29 @@ up_ind_check_max_depth_answer = {
 # id tracing -----------------------------------------------------------
 # Translate the previous test from ind to id
 down_id_check_max_depth_answer = {}
- key_1, val_1 in down_ind_check_max_depth_answer.items():
+for key_1, val_1 in down_ind_check_max_depth_answer.items():
     down_id_check_max_depth_answer[key_1] = {}
-     key_2, val_2 in val_1.items():
+    for key_2, val_2 in val_1.items():
         down_id_check_max_depth_answer[key_1][key_2] = []
-         ii in range(len(val_2)):
+        for ii in range(len(val_2)):
             down_id_check_max_depth_answer[key_1][key_2] += [
                 (rl.routelink.inds_to_ids(val_2[ii][0]),
                  rl.routelink.inds_to_ids(val_2[ii][1]))]
 
- max_depth in down_id_check_max_depth_answer.keys():
+for max_depth in down_id_check_max_depth_answer.keys():
     # list ind passed
     down_id_check = {
         key: rl.routelink.get_downstream_ids(value, max_depth=max_depth)
-         key, value in inds_check_answer.items()}
-     key in down_id_check.keys():
+        for key, value in inds_check_answer.items()}
+    for key in down_id_check.keys():
         assert (down_id_check[key] ==
                 down_id_check_max_depth_answer[max_depth][key])
     # list id passed
     down_id_id_in_check = {
         key: rl.routelink.get_downstream_ids(
             value, max_depth=max_depth, id_in=True)
-         key, value in ids_check.items()}    
-     key in down_id_id_in_check.keys():
+        for key, value in ids_check.items()}    
+    for key in down_id_id_in_check.keys():
         assert (down_id_id_in_check[key] ==
                 down_id_check_max_depth_answer[max_depth][key])
 
@@ -249,7 +249,7 @@ assert (rl.routelink.get_outlet_ids(outlet_id, id_in=True) ==
 # list input
 # Get all outlet gages
 all_outlets = rl.routelink.get_outlet_inds(rl.feature_id.values.tolist())
-outlet_inds = np.unique([tt[1][0]  tt in all_outlets])
+outlet_inds = np.unique([tt[1][0] for tt in all_outlets])
 assert (rl.to.isel(feature_id=outlet_inds).values == 0).all()
 # also check that these are all the zeros in the to field
 assert len(rl.where(rl.to == 0, drop=True).to) == len(outlet_inds)
