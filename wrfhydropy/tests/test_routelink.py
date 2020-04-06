@@ -8,11 +8,15 @@ from .data import collection_data_download
 # from wrfhydropy.core.routelink import Routelink
 
 
+# TODO test passing gage to above functions.
+# TODO check birfuractions with max_depth
+# TODO add routelink_fromVars.nc to the croton test domain.
+
 # Currently "fromVars" is not in the generic domain/files.
 # test_dir = pathlib.Path(os.path.dirname(os.path.realpath(__file__)))
 # The collection_data gets wiped...
 # collection_data_download.download()
-# rl_file = test_dir / 'data/collection_data/croton_NY/NWM/DOMAIN' 
+# rl_file = test_dir / 'data/collection_data/croton_NY/NWM/DOMAIN'
 rl_file = pathlib.Path(
     '/Users/james/Downloads/croton_Route_Link_fromVars.nc')
 rl = xr.open_dataset(rl_file)
@@ -154,7 +158,6 @@ def test_down_ind_trace():
 
 
 # Confirm the upstream indices
-# TODO: check birfuractions with max_depth
 up_ind_check_max_depth_answer = {
     1: {'headwater': [([20], [])],
         'outlet': [([179], [177])],
@@ -309,121 +312,12 @@ def test_gages_from_inds():
     assert only_gages_from_ids_no_drop == only_gages_check
 
 
-# # ---------------------------------------------------------------------------
-# # TODO test passing gage to above functions.
-
 # ---------------------------------------------------------------------------
-# Get nested gages organized by
-# {outlet1: {nest1: [up1, up2, ...], nest2: [up1, up2, ...], ...}, outlet2: {}}
-adf
-just_gages = rl.routelink.inds_to_gages(all_inds)
-gage_outlets = rl.routelink.get_outlet_inds(just_gages[0])
-outlets = np.unique([go[1][0] for go in gage_outlets]).tolist()
-
-outlet_gages = {}
-for oo in outlets:
-    outlet_gages[oo] = []
-    for go in gage_outlets:
-        if go[1][0] == oo:
-            outlet_gages[oo] += [go[0][0]]
-
-outlet_gages2 = rl.routelink.gage_inds_by_outlet_ind()
-
-            
-# DOWNstream approach should be faster
-outlet_gages_down_gages = {
-    key: {vv: rl.routelink.inds_to_gages(
-                  rl.routelink.get_downstream_inds(vv)[1])[0]
-          for vv in val}
-    for key, val in outlet_gages.items()}
-outlet_gages_down_gages = {
-    k0: {k1: v1 for k1, v1 in v0.items() if v1 != []}
-    for k0, v0 in outlet_gages_down_gages.items()}
-
-# Could probably rely on ordering but that's sketch
-# which ever value's map produces all the other values in the list, that's the closest
-# just keep that one. map becomes 1-1 (but repeated rhs/values)
-outlet_gages_down_gage = {}
-for k0, v0 in outlet_gages_down_gages.items():
-    outlet_gages_down_gage[k0] = {}
-    for k1, v1 in v0.items():
-        if len(v1) == 1:
-            outlet_gages_down_gage[k0][k1] = v1
-        else:
-            for vv in v1:
-                if vv in v0.keys():
-                    if sorted([vv] + v0[vv]) == sorted(v1):
-                        outlet_gages_down_gage[k0][k1] = [vv]
-                        break
-
-# invert the dictonary to get upstream of each ind: will be one to many 
-down_gages = {k0: np.unique([v1 for k1, v1 in v0.items()]).tolist()
-              for k0, v0 in outlet_gages_down_gage.items()}
-up_gages = {}
-for k0, v0 in outlet_gages_down_gage.items():
-    up_gages[k0] = {}
-    for gg in down_gages[k0]:
-        up_gages[k0][gg] = []
-        for k1, v1 in outlet_gages_down_gage[k0].items():
-            if gg == v1[0]:
-                up_gages[k0][gg] += [k1]
-
-# affa
-
-# # # function to get outlet  each link
-# # from_ind_check = to_ind_rl_check_answer
-# # to_ind_rl_check_answer = {
-# #     key: np.where(rl.link == value)[0].tolist()
-# #      key, value in to_link_rl_check.items()}
-# # to_ind_check = {
-# #     key: rl.routelink.get_downstream_inds(value[0], max_depth=1)[1]
-# #      key, value in inds_check_scalar_answer.items()}
-# #  key in to_ind_check.keys():
-# #     assert np.array_equal(
-# #         np.array(to_ind_check[key]), np.array(to_ind_rl_check_answer[key]) )
+# Get gages from inds
+nested_gage_inds_answer = {179: {160: [142], 179: [143, 160]}}
 
 
-# # # -----------------------------------------------------------------------------
-
-# # all_downstream_inds = [
-# #     rl.routelink.get_downstream_inds(link, max_depth=1)  link in upstream_inds[1]]
-
-
-# # len(to_ind_check['outlet'])
-
-
-# # # to re
-
-# # trace_down_1 = {
-# #     key: rl.routelink.get_downstream_inds(value[0], max_depth=1)
-# #      key, value in inds_to_check.items()}
-
-
-# # # -----------------------------------------------------------------------------
-
-# # downstream_inds = rl.routelink.get_downstream_inds(33528)
-
-# # # Go back up but just a bit further, bifurcating to the mainstem
-# # upstream_inds = rl.routelink.get_upstream_inds(downstream_inds[1][0], max_depth=2)
-# # # Start from the result of the previous, go back down but just one link
-# # all_downstream_inds = [
-# #     rl.routelink.get_downstream_inds(link, max_depth=1)  link in upstream_inds[1]]
-
-
-
-# # #check_from = {key: rl.to[value].values  key, value in inds_to_check.items()}
-
-# # check_to
-
-# # upstream_inds = rl.routelink.get_upstream_inds(, max_depth=2)
-# # # Start from the result of the previous, go back down but just one link
-
-
-# # downstream_inds = rl.routelink.get_downstream_inds(33528)
-
-# # # Go back up but just a bit further, bifurcating to the mainstem
-# # all_downstream_inds = [
-# #     rl.routelink.get_downstream_inds(link, max_depth=1)  link in upstream_inds[1]]
-
-
-
+def test_nested_gages_inds():
+    gage_inds = rl.routelink.inds_to_gages()[0]
+    nested_gage_inds = rl.routelink.get_nested_gages(gage_inds)
+    assert nested_gage_inds == nested_gage_inds_answer

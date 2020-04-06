@@ -175,7 +175,7 @@ class Routelink:
 
     def inds_to_gages(self, ind_in: list = [], drop_missing: bool = True):
         if ind_in == []:
-            ind_in = rl._obj.feature_id.values.tolist()
+            ind_in = self._obj.feature_id.values.tolist()
         if isinstance(ind_in, (int, np.integer)):
             ind_in = list(ind_in)
         elif not isinstance(ind_in, list):
@@ -190,25 +190,68 @@ class Routelink:
         else:
             return gage_list
 
-    def gage_inds_by_outlet_ind(gage_inds: list = []):
-        if gage_inds == []:
-            gage_inds = self.inds_to_gages()
-        outlet_gages = {}
+    def inds_by_outlet_ind(self, inds_in: list):
+        """
+        For input indices, return these grouped by their outlet index.
+        """
+        outlet_inds_list = self.get_outlet_inds(inds_in)
+        outlets = np.unique([go[1][0] for go in outlet_inds_list]).tolist()
+        outlet_inds = {}
         for oo in outlets:
-            outlet_gages[oo] = []
-            for go in gage_outlets:
+            outlet_inds[oo] = []
+            for go in outlet_inds_list:
                 if go[1][0] == oo:
-                    outlet_gages[oo] += [go[0][0]]
-        
-    
-    def get_nested_gages():
-
-        
+                    outlet_inds[oo] += [go[0][0]]
+        return outlet_inds
 
 
-
-
-
+    def get_nested_gages(self, gage_inds: list):
+        """
+        Get nested gages organized by
+        {outlet1: {nest1: [up1, up2, ...], nest2: [up1, up2, ...], ...}, outlet2: {}}
+        """
+        # First, organize the gages by their outlet gage.
+        outlet_gages = self.inds_by_outlet_ind(gage_inds)
+        # Second, for each gage get all the downstream gages
+        outlet_gages_down_gages = {
+            key: {vv: self.inds_to_gages(
+                          self.get_downstream_inds(vv)[1])[0]
+                  for vv in val}
+            for key, val in outlet_gages.items()}
+        outlet_gages_down_gages = {
+            k0: {k1: v1 for k1, v1 in v0.items() if v1 != []}
+            for k0, v0 in outlet_gages_down_gages.items()}
+        # Third, reduce the list of downstream gages to just the first. 
+        # I dont want to rely on ordering in the returned lists of gage indices.
+        # Instead, which ever value's map produces all the other values in the list,
+        # that's the closest just keep that one for each gage.
+        # The resulting dict is 1-1 (but repeated rhs/values)
+        outlet_gages_down_gage = {}
+        for k0, v0 in outlet_gages_down_gages.items():
+            outlet_gages_down_gage[k0] = {}
+            for k1, v1 in v0.items():
+                if len(v1) == 1:
+                    outlet_gages_down_gage[k0][k1] = v1
+                else:
+                    for vv in v1:
+                        if vv in v0.keys():
+                            if sorted([vv] + v0[vv]) == sorted(v1):
+                                outlet_gages_down_gage[k0][k1] = [vv]
+                                break
+        # Fourth, invert this so that upstream:downstream becomes
+        # downstream:[upstream] collecting all the repeated downstreams so that
+        # downstream is unique and upstream is a list of the first upstream gages
+        down_gages = {k0: np.unique([v1 for k1, v1 in v0.items()]).tolist()
+                      for k0, v0 in outlet_gages_down_gage.items()}
+        up_gages = {}
+        for k0, v0 in outlet_gages_down_gage.items():
+            up_gages[k0] = {}
+            for gg in down_gages[k0]:
+                up_gages[k0][gg] = []
+                for k1, v1 in outlet_gages_down_gage[k0].items():
+                    if gg == v1[0]:
+                        up_gages[k0][gg] += [k1]
+        return up_gages
 
 
 # # *=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=
