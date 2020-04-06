@@ -312,57 +312,61 @@ def test_gages_from_inds():
 # # ---------------------------------------------------------------------------
 # # TODO test passing gage to above functions.
 
-# # ---------------------------------------------------------------------------
-# # Get nested gages organized by
-# # {outlet1: {nest1: [up1, up2, ...], nest2: [up1, up2, ...], ...}, outlet2: {}}
-# just_gages = rl.routelink.inds_to_gages(all_inds)
-# gage_outlets = rl.routelink.get_outlet_inds(just_gages[0][0:4])
-# outlets = np.unique([go[1][0] for go in gage_outlets]).tolist()
+# ---------------------------------------------------------------------------
+# Get nested gages organized by
+# {outlet1: {nest1: [up1, up2, ...], nest2: [up1, up2, ...], ...}, outlet2: {}}
+adf
+just_gages = rl.routelink.inds_to_gages(all_inds)
+gage_outlets = rl.routelink.get_outlet_inds(just_gages[0])
+outlets = np.unique([go[1][0] for go in gage_outlets]).tolist()
 
-# outlet_gages = {}
-# for oo in outlets:
-#     outlet_gages[oo] = []
-#     for go in gage_outlets:
-#         if go[1][0] == oo:
-#             outlet_gages[oo] += [go[0][0]]
+outlet_gages = {}
+for oo in outlets:
+    outlet_gages[oo] = []
+    for go in gage_outlets:
+        if go[1][0] == oo:
+            outlet_gages[oo] += [go[0][0]]
 
-# # DOWNstream approach should be faster
-# outlet_gages_down_gages = {
-#     key: {vv: rl.routelink.inds_to_gages(
-#                   rl.routelink.get_downstream_inds(vv)[1])[0]
-#           for vv in val}
-#     for key, val in outlet_gages.items()}
-# outlet_gages_down_gages = {
-#     k0: {k1: v1 for k1, v1 in v0.items() if v1 != []}
-#     for k0, v0 in outlet_gages_down_gages.items()}
+outlet_gages2 = rl.routelink.gage_inds_by_outlet_ind()
 
-# # Could probably rely on ordering but that's sketch
-# # which ever value's map produces all the other values in the list, that's the closest
-# # just keep that one. map becomes 1-1 (but repeated rhs/values)
-# outlet_gages_down_gage = {}
-# for k0, v0 in outlet_gages_down_gages.items():
-#     outlet_gages_down_gage[k0] = {}
-#     for k1, v1 in v0.items():
-#         if len(v1) == 1:
-#             outlet_gages_down_gage[k0][k1] = v1
-#         else:
-#             for vv in v1:
-#                 if vv in v0.keys():
-#                     if sorted([vv] + v0[vv]) == sorted(v1):
-#                         outlet_gages_down_gage[k0][k1] = [vv]
-#                         break
+            
+# DOWNstream approach should be faster
+outlet_gages_down_gages = {
+    key: {vv: rl.routelink.inds_to_gages(
+                  rl.routelink.get_downstream_inds(vv)[1])[0]
+          for vv in val}
+    for key, val in outlet_gages.items()}
+outlet_gages_down_gages = {
+    k0: {k1: v1 for k1, v1 in v0.items() if v1 != []}
+    for k0, v0 in outlet_gages_down_gages.items()}
 
-# # invert the dictonary to get upstream of each ind: will be one to many 
-# down_gages = {k0: np.unique([v1 for k1, v1 in v0.items()]).tolist()
-#               for k0, v0 in outlet_gages_down_gage.items()}
-# up_gages = {}
-# for k0, v0 in outlet_gages_down_gage.items():
-#     up_gages[k0] = {}
-#     for gg in down_gages[k0]:
-#         up_gages[k0][gg] = []
-#         for k1, v1 in outlet_gages_down_gage[k0].items():
-#             if gg == v1[0]:
-#                 up_gages[k0][gg] += [k1]
+# Could probably rely on ordering but that's sketch
+# which ever value's map produces all the other values in the list, that's the closest
+# just keep that one. map becomes 1-1 (but repeated rhs/values)
+outlet_gages_down_gage = {}
+for k0, v0 in outlet_gages_down_gages.items():
+    outlet_gages_down_gage[k0] = {}
+    for k1, v1 in v0.items():
+        if len(v1) == 1:
+            outlet_gages_down_gage[k0][k1] = v1
+        else:
+            for vv in v1:
+                if vv in v0.keys():
+                    if sorted([vv] + v0[vv]) == sorted(v1):
+                        outlet_gages_down_gage[k0][k1] = [vv]
+                        break
+
+# invert the dictonary to get upstream of each ind: will be one to many 
+down_gages = {k0: np.unique([v1 for k1, v1 in v0.items()]).tolist()
+              for k0, v0 in outlet_gages_down_gage.items()}
+up_gages = {}
+for k0, v0 in outlet_gages_down_gage.items():
+    up_gages[k0] = {}
+    for gg in down_gages[k0]:
+        up_gages[k0][gg] = []
+        for k1, v1 in outlet_gages_down_gage[k0].items():
+            if gg == v1[0]:
+                up_gages[k0][gg] += [k1]
 
 # affa
 

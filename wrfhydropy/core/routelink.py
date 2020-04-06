@@ -173,7 +173,9 @@ class Routelink:
             raise ValueError('Input argument must be integer.')
         return self._obj['gages'].isel(feature_id=ind_in).values.tolist()
 
-    def inds_to_gages(self, ind_in: list, drop_missing: bool = True):
+    def inds_to_gages(self, ind_in: list = [], drop_missing: bool = True):
+        if ind_in == []:
+            ind_in = rl._obj.feature_id.values.tolist()
         if isinstance(ind_in, (int, np.integer)):
             ind_in = list(ind_in)
         elif not isinstance(ind_in, list):
@@ -188,29 +190,20 @@ class Routelink:
         else:
             return gage_list
 
-    # def get_gages_above(self, inds, keep_vars=['gages', 'feature_id']):
-    # get all gages above,
-    # for all gages find the first downstream gage
+    def gage_inds_by_outlet_ind(gage_inds: list = []):
+        if gage_inds == []:
+            gage_inds = self.inds_to_gages()
+        outlet_gages = {}
+        for oo in outlets:
+            outlet_gages[oo] = []
+            for go in gage_outlets:
+                if go[1][0] == oo:
+                    outlet_gages[oo] += [go[0][0]]
+        
+    
+    def get_nested_gages():
 
-    # def get_gage_below(self, inds, keep_vars=['gages', 'feature_id']):        
-
-    def get_gages_from_inds(self, inds, keep_vars=['gages', 'feature_id']):
-        asdf
-        rl_sub = self._obj.drop_vars(set(self._obj.variables) - set(keep_vars))
-        rl_sub['index'] = xr.DataArray(
-            np.arange(len(self._obj[keep_vars[0]])), dims='feature_id')
-        rl_sub = rl_sub.isel({'feature_id': inds})
-        rl_sub_2 = rl_sub.where(rl_sub.gages != missing_gage, drop=True)
-        # This is annoying that where changes the types to float/object
-        for var in list(rl_sub.variables):
-            rl_sub_2[var] = rl_sub_2[var].astype(rl_sub[var].dtype)
-        return rl_sub_2
-
-
-
-
-    # get upstream gages
-
+        
 
 
 
