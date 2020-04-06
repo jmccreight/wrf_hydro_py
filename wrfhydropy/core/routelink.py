@@ -205,11 +205,13 @@ class Routelink:
         return outlet_inds
 
 
-    def get_nested_gages(self, gage_inds: list):
+    def get_nested_gage_inds(self, gage_inds: list = []):
         """
         Get nested gages organized by
         {outlet1: {nest1: [up1, up2, ...], nest2: [up1, up2, ...], ...}, outlet2: {}}
         """
+        if gage_inds == []:
+            gage_inds = self.inds_to_gages()[0]
         # First, organize the gages by their outlet gage.
         outlet_gages = self.inds_by_outlet_ind(gage_inds)
         # Second, for each gage get all the downstream gages
@@ -253,6 +255,13 @@ class Routelink:
                         up_gages[k0][gg] += [k1]
         return up_gages
 
+    def get_nested_gages(self, gage_inds: list = []):
+        nested_gage_inds = self.get_nested_gage_inds(gage_inds)
+        nested_gages = {
+            k0: {k1: self.inds_to_gages(v1)[1] for k1, v1 in v0.items()}
+            for k0, v0 in nested_gage_inds.items()
+        }
+        return nested_gages
 
 # # *=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=
 # # Copyright UCAR (c) 2018

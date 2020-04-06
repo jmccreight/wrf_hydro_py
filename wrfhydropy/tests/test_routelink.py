@@ -315,9 +315,16 @@ def test_gages_from_inds():
 # ---------------------------------------------------------------------------
 # Get gages from inds
 nested_gage_inds_answer = {179: {160: [142], 179: [143, 160]}}
+nested_gages_answer = {
+    179: {160: [b'       01374559'],
+          179: [b'       01374598', b'       01374581']}}
 
 
-def test_nested_gages_inds():
-    gage_inds = rl.routelink.inds_to_gages()[0]
-    nested_gage_inds = rl.routelink.get_nested_gages(gage_inds)
+def test_nested_gage_inds():
+    nested_gage_inds = rl.routelink.get_nested_gage_inds()
     assert nested_gage_inds == nested_gage_inds_answer
+
+
+def test_nested_gages():
+    nested_gages = rl.routelink.get_nested_gages()
+    assert nested_gages == nested_gages_answer
