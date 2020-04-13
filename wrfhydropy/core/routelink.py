@@ -1,3 +1,4 @@
+from datetime import datetime
 from itertools import chain
 import numpy as np
 from typing import Union
@@ -184,7 +185,7 @@ class Routelink:
             ind_in = list(ind_in)
         elif not isinstance(ind_in, (list, np.ndarray)):
             raise ValueError('Input argument must be list or integer.')
-        gage_list = self._obj['gages'].isel(feature_id=ind_in).values.tolist()        
+        gage_list = self._obj['gages'].isel(feature_id=ind_in).values.tolist()
         # gage_list = [self.ind_to_gage(ii) for ii in ind_in]
         if drop_missing:
             gage_list = [gg for gg in gage_list if gg != missing_gage]
@@ -220,14 +221,36 @@ class Routelink:
         # First, organize the gages by their outlet gage.
         outlet_gages = self.inds_by_outlet_ind(gage_inds)
         # Second, for each gage get all the downstream gages
-        outlet_gages_down_gages = {
-            key: {vv: self.inds_to_gages(
-                          self.get_downstream_inds(vv)[1])[0]
-                  for vv in val}
-            for key, val in outlet_gages.items()}
-        outlet_gages_down_gages = {
-            k0: {k1: v1 for k1, v1 in v0.items() if v1 != []}
-            for k0, v0 in outlet_gages_down_gages.items()}
+
+        current_time = datetime().now.strftime("%H:%M:%S")
+        print("Point 0 =", current_time)
+        
+        outlet_gages_down_gages = {}
+        for key, val in outlet_gages.items():
+            print(key)
+            outlet_gages_down_gages[key] = {
+                vv: self.inds_to_gages(self.get_downstream_inds(vv)[1])[0]
+                for vv in val}
+        # outlet_gages_down_gages = {
+        #     key: {vv: self.inds_to_gages(
+        #                   self.get_downstream_inds(vv)[1])[0]
+        #           for vv in val}
+        #     for key, val in outlet_gages.items()}
+
+        current_time = datetime().now.strftime("%H:%M:%S")
+        print("Point 1 =", current_time)
+
+        outlet_gages_down_gages = {}
+        for k0, v0 in outlet_gages_down_gages.items():
+            outlet_gages_down_gages[k0] = {
+                k1: v1 for k1, v1 in v0.items() if v1 != []}
+        # outlet_gages_down_gages = {
+        #     k0: {k1: v1 for k1, v1 in v0.items() if v1 != []}
+        #     for k0, v0 in outlet_gages_down_gages.items()}
+
+        current_time = datetime().now.strftime("%H:%M:%S")
+        print("Point 3 =", current_time)
+
         # Third, reduce the list of downstream gages to just the first. 
         # I dont want to rely on ordering in the returned lists of gage indices.
         # Instead, which ever value's map produces all the other values in the list,
@@ -245,11 +268,19 @@ class Routelink:
                             if sorted([vv] + v0[vv]) == sorted(v1):
                                 outlet_gages_down_gage[k0][k1] = [vv]
                                 break
+
+        current_time = datetime().now.strftime("%H:%M:%S")
+        print("Point 4 =", current_time)
+
         # Fourth, invert this so that upstream:downstream becomes
         # downstream:[upstream] collecting all the repeated downstreams so that
         # downstream is unique and upstream is a list of the first upstream gages
         down_gages = {k0: np.unique([v1 for k1, v1 in v0.items()]).tolist()
                       for k0, v0 in outlet_gages_down_gage.items()}
+
+        current_time = datetime().now.strftime("%H:%M:%S")
+        print("Point 5 =", current_time)
+
         up_gages = {}
         for k0, v0 in outlet_gages_down_gage.items():
             up_gages[k0] = {}
@@ -258,6 +289,10 @@ class Routelink:
                 for k1, v1 in outlet_gages_down_gage[k0].items():
                     if gg == v1[0]:
                         up_gages[k0][gg] += [k1]
+
+        current_time = datetime().now.strftime("%H:%M:%S")
+        print("Point 6 =", current_time)
+
         return up_gages
 
     def get_nested_gages(self, gage_inds: list = []):
