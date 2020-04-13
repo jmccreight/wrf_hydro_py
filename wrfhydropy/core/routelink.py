@@ -1,5 +1,6 @@
 from itertools import chain
 import numpy as np
+from typing import Union
 import xarray as xr
 
 #                123456789012345
@@ -103,41 +104,46 @@ class Routelink:
         return self.trace_links(direction='down', *args, **kwargs)
 
     def get_downstream_ids(self, *args, **kwargs):
-        inds_result = self.trace_links(direction='down', *args, **kwargs)
-        return [(self.inds_to_ids(ii[0]), self.inds_to_ids(ii[1]))
-                for ii in inds_result]
+        inds_result = self.get_downstream_inds(*args, **kwargs)
+        return [(self.inds_to_ids(inds_result[0][0]), self.inds_to_ids(inds_result[0][1]))]
+        #return [(self.inds_to_ids(ii[0]), self.inds_to_ids(ii[1]))
+        #        for ii in inds_result]
 
-    def id_to_ind(self, id_in: int):
-        if not isinstance(id_in, (int, np.integer)):
-            raise ValueError('Input argument must be integer.')
-        return np.where(self._obj['link'] == id_in)[0][0]
+    # def id_to_ind(self, id_in: int):
+    #     if not isinstance(id_in, (int, np.integer)):
+    #         raise ValueError('Input argument must be integer.')
+    #     return np.where(self._obj['link'] == id_in)[0][0]
 
     def ids_to_inds(self, id_in: list):
         if isinstance(id_in, (int, np.integer)):
             id_in = [id_in]
-        elif not isinstance(id_in, list):
+        elif not isinstance(id_in, (list, np.ndarray)):
             raise ValueError('Input argument must be list or integer.')
-        return [self.id_to_ind(ii) for ii in id_in]
+        return np.where(self._obj.link.isin(id_in))[0]
+        # return [self.id_to_ind(ii) for ii in id_in]
 
-    def ind_to_id(self, ind_in: int):
-        if not isinstance(ind_in, (int, np.integer)):
-            raise ValueError('Input argument must be integer.')
-        return self._obj['link'].isel(feature_id=ind_in).values.tolist()
+    # def ind_to_id(self, ind_in: int):
+    #     if not isinstance(ind_in, (int, np.integer)):
+    #         raise ValueError('Input argument must be integer.')
+    #     return self._obj['link'].isel(feature_id=ind_in).values.tolist()
 
     def inds_to_ids(self, ind_in: list):
         if isinstance(ind_in, (int, np.integer)):
-            ind_in = list(ind_in)
-        elif not isinstance(ind_in, list):
+            ind_in = [ind_in]
+        elif not isinstance(ind_in, (list, np.ndarray)):
             raise ValueError('Input argument must be list or integer.')
-        return [self.ind_to_id(ii) for ii in ind_in]
+        return self._obj.link.isel(feature_id=ind_in).values
+        # return [self.ind_to_id(ii) for ii in ind_in]
 
     def get_outlet_inds(self, index_or_gage, id_in=False):
         # this could use a generator since only the last value is kept
         if isinstance(index_or_gage, (int, np.integer, str)):
             index_or_gage = [index_or_gage]
-        elif not isinstance(index_or_gage, list):
+        elif not isinstance(index_or_gage, (list, np.ndarray)):
             raise ValueError('Input argument must be list or integer.')       
         inds = self.trace_links(index_or_gage, id_in=id_in, direction='down')
+        if not isinstance(inds, list):
+            inds = [inds]
         outlets = []
         for ii in range(len(inds)):
             # if it is its own outlet!
@@ -157,7 +163,7 @@ class Routelink:
         return outlets
 
     def id_to_gage(self, id_in: int):
-        return self.ind_to_gage(self.id_to_ind(id_in))
+        return self.inds_to_gage(self.id_to_ind(id_in))
 
     def ids_to_gages(self, ids_in: list, drop_missing: bool = True):
         ret_val = self.inds_to_gages(
@@ -168,19 +174,18 @@ class Routelink:
         else:
             return ret_val
 
-    def ind_to_gage(self, ind_in: int):
-        if not isinstance(ind_in, (int, np.integer)):
-            raise ValueError('Input argument must be integer.')
-        return self._obj['gages'].isel(feature_id=ind_in).values.tolist()
-
-    def inds_to_gages(self, ind_in: list = [], drop_missing: bool = True):
-        if ind_in == []:
+    def inds_to_gages(
+            self,
+            ind_in: Union[int, np.integer, list, np.array] = [],
+            drop_missing: bool = True):
+        if len(ind_in) is 0:
             ind_in = self._obj.feature_id.values.tolist()
         if isinstance(ind_in, (int, np.integer)):
             ind_in = list(ind_in)
-        elif not isinstance(ind_in, list):
+        elif not isinstance(ind_in, (list, np.ndarray)):
             raise ValueError('Input argument must be list or integer.')
-        gage_list = [self.ind_to_gage(ii) for ii in ind_in]
+        gage_list = self._obj['gages'].isel(feature_id=ind_in).values.tolist()        
+        # gage_list = [self.ind_to_gage(ii) for ii in ind_in]
         if drop_missing:
             gage_list = [gg for gg in gage_list if gg != missing_gage]
             gage_inds = self._obj.feature_id.where(

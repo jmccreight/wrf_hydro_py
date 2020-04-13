@@ -40,14 +40,14 @@ rl = xr.open_dataset(rl_file)
 
 # Perform checks on a headwater and an outlet reach
 ids_check_answer = {
-    'headwater': [6228190],
-    'outlet': [6227150],
-    'both': [6228190, 6227150]}
+    'headwater': np.array([6228190]),
+    'outlet': np.array([6227150]),
+    'both': np.array([6228190, 6227150])}
 
 inds_check_answer = {
-    'headwater': [20],
-    'outlet': [179],
-    'both': [20, 179]}
+    'headwater': np.array([20]),
+    'outlet': np.array([179]),
+    'both': np.array([20, 179])}
 
 
 # ind <-> id translation -------------------------------------------------------------------
@@ -56,7 +56,7 @@ inds_check_answer = {
 def test_id_to_ind_scalar():
     # pass scalars
     inds_check = {
-        key: [rl.routelink.id_to_ind(intg) for intg in lst]
+        key: [rl.routelink.ids_to_inds(intg) for intg in lst]
         for key, lst in ids_check_answer.items()}
     for key in inds_check:
         assert all([inds_check[key][ii] == inds_check_answer[key][ii]
@@ -69,19 +69,20 @@ def test_id_to_ind_list():
         key: rl.routelink.ids_to_inds(value)
         for key, value in ids_check_answer.items()}
     for key in inds_check:
-        assert inds_check[key] == inds_check_answer[key]
+        assert (inds_check[key] == inds_check_answer[key]).all()
 
     # Full domain list
     inds_check_answer_full_domain = rl.feature_id.values.tolist()
     inds_check_list_full_domain = (
         rl.routelink.ids_to_inds(rl.link.values.tolist()))
-    assert inds_check_answer_full_domain == inds_check_list_full_domain
+    assert (inds_check_answer_full_domain ==
+            inds_check_list_full_domain).all()
 
 
 def test_ind_to_id_scalar():
     ids_check = {
-        key: [rl.routelink.ind_to_id(intg) for intg in lst]
-        for key, lst in inds_check_answer.items()}
+        key: [rl.routelink.inds_to_ids(intg) for intg in arr.tolist()]
+        for key, arr in inds_check_answer.items()}
     for key in ids_check:
         assert all([ids_check[key][ii] == ids_check_answer[key][ii]
                     for ii in range(len(ids_check_answer[key]))])
@@ -92,13 +93,14 @@ def test_ind_to_id_list():
         key: rl.routelink.inds_to_ids(value)
         for key, value in inds_check_answer.items()}
     for key in ids_check:
-        assert ids_check[key] == ids_check_answer[key]
+        assert (ids_check[key] == ids_check_answer[key]).all()
 
     # Full domain list
     ids_check_answer_full_domain = rl.link.values.tolist()
     ids_check_list_full_domain = (
         rl.routelink.inds_to_ids(rl.feature_id.values.tolist()))
-    assert ids_check_answer_full_domain == ids_check_list_full_domain
+    assert (ids_check_answer_full_domain ==
+            ids_check_list_full_domain).all()
 
 
 # ind tracing -------------------------------------------------------------------
@@ -227,23 +229,32 @@ for key_1, val_1 in down_ind_check_max_depth_answer.items():
                  rl.routelink.inds_to_ids(val_2[ii][1]))]
 
 
+def check_down_id(to_check, max_depth):
+    answer = down_id_check_max_depth_answer
+    for key in to_check.keys():
+        for pp in range(len(list(to_check[key]))):
+            assert (to_check[key][pp][0] ==
+                    answer[max_depth][key][pp][0]).all()
+            if len(to_check[key][pp][1]) is 0:
+                assert len(answer[max_depth][key][pp][1]) is 0
+            else:
+                assert (to_check[key][pp][1] ==
+                        answer[max_depth][key][pp][1]).all()
+    return None
+
+
 def test_down_id_trace():
     for max_depth in down_id_check_max_depth_answer.keys():
         # list ind passed
         down_id_check = {
             key: rl.routelink.get_downstream_ids(value, max_depth=max_depth)
             for key, value in inds_check_answer.items()}
-        for key in down_id_check.keys():
-            assert (down_id_check[key] ==
-                    down_id_check_max_depth_answer[max_depth][key])
-        # list id passed
+        _ = check_down_id(down_id_check, max_depth)
         down_id_id_in_check = {
             key: rl.routelink.get_downstream_ids(
                 value, max_depth=max_depth, id_in=True)
             for key, value in ids_check_answer.items()}
-        for key in down_id_id_in_check.keys():
-            assert (down_id_id_in_check[key] ==
-                    down_id_check_max_depth_answer[max_depth][key])
+        _ = check_down_id(down_id_id_in_check, max_depth)
 
 
 # ---------------------------------------------------------------------------
