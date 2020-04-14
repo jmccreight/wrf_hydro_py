@@ -218,13 +218,11 @@ class Routelink:
         """
         if gage_inds == []:
             gage_inds = self.inds_to_gages()[0]
+
         # First, organize the gages by their outlet gage.
         outlet_gages = self.inds_by_outlet_ind(gage_inds)
-        # Second, for each gage get all the downstream gages
 
-        current_time = datetime().now.strftime("%H:%M:%S")
-        print("Point 0 =", current_time)
-        
+        # Second, for each gage get all the downstream gages
         outlet_gages_down_gages = {}
         for key, val in outlet_gages.items():
             print(key)
@@ -237,19 +235,13 @@ class Routelink:
         #           for vv in val}
         #     for key, val in outlet_gages.items()}
 
-        current_time = datetime().now.strftime("%H:%M:%S")
-        print("Point 1 =", current_time)
-
-        outlet_gages_down_gages = {}
+        outlet_gages_down_gages_2 = {}
         for k0, v0 in outlet_gages_down_gages.items():
-            outlet_gages_down_gages[k0] = {
+            outlet_gages_down_gages_2[k0] = {
                 k1: v1 for k1, v1 in v0.items() if v1 != []}
         # outlet_gages_down_gages = {
         #     k0: {k1: v1 for k1, v1 in v0.items() if v1 != []}
         #     for k0, v0 in outlet_gages_down_gages.items()}
-
-        current_time = datetime().now.strftime("%H:%M:%S")
-        print("Point 3 =", current_time)
 
         # Third, reduce the list of downstream gages to just the first. 
         # I dont want to rely on ordering in the returned lists of gage indices.
@@ -257,7 +249,7 @@ class Routelink:
         # that's the closest just keep that one for each gage.
         # The resulting dict is 1-1 (but repeated rhs/values)
         outlet_gages_down_gage = {}
-        for k0, v0 in outlet_gages_down_gages.items():
+        for k0, v0 in outlet_gages_down_gages_2.items():
             outlet_gages_down_gage[k0] = {}
             for k1, v1 in v0.items():
                 if len(v1) == 1:
@@ -269,17 +261,11 @@ class Routelink:
                                 outlet_gages_down_gage[k0][k1] = [vv]
                                 break
 
-        current_time = datetime().now.strftime("%H:%M:%S")
-        print("Point 4 =", current_time)
-
         # Fourth, invert this so that upstream:downstream becomes
         # downstream:[upstream] collecting all the repeated downstreams so that
         # downstream is unique and upstream is a list of the first upstream gages
         down_gages = {k0: np.unique([v1 for k1, v1 in v0.items()]).tolist()
                       for k0, v0 in outlet_gages_down_gage.items()}
-
-        current_time = datetime().now.strftime("%H:%M:%S")
-        print("Point 5 =", current_time)
 
         up_gages = {}
         for k0, v0 in outlet_gages_down_gage.items():
@@ -289,9 +275,6 @@ class Routelink:
                 for k1, v1 in outlet_gages_down_gage[k0].items():
                     if gg == v1[0]:
                         up_gages[k0][gg] += [k1]
-
-        current_time = datetime().now.strftime("%H:%M:%S")
-        print("Point 6 =", current_time)
 
         return up_gages
 
