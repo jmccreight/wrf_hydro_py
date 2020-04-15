@@ -225,7 +225,6 @@ class Routelink:
         # Second, for each gage get all the downstream gages
         outlet_gages_down_gages = {}
         for key, val in outlet_gages.items():
-            print(key)
             outlet_gages_down_gages[key] = {
                 vv: self.inds_to_gages(self.get_downstream_inds(vv)[1])[0]
                 for vv in val}
