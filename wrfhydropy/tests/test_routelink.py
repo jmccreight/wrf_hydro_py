@@ -18,7 +18,8 @@ from .data import collection_data_download
 # collection_data_download.download()
 # rl_file = test_dir / 'data/collection_data/croton_NY/NWM/DOMAIN'
 rl_file = pathlib.Path(
-    '/Users/james/Downloads/croton_Route_Link_fromVars.nc')
+#    '/Users/james/Downloads/croton_Route_Link_fromVars.nc')
+    '/glade/u/home/jamesmcc/Downloads/croton_Route_Link_fromVars.nc')
 rl = xr.open_dataset(rl_file)
 # could shorthand: rl_rl = rl.routelink
 
@@ -322,6 +323,20 @@ def test_gages_from_inds():
         only_gages_from_ids_drop[0], drop_missing=False)
     assert only_gages_from_ids_no_drop == only_gages_check
 
+
+def test_inds_ids_from_gages():
+    all_gages = rl.gages.values.tolist()
+    all_inds = rl.feature_id.values.tolist()
+    all_ids = rl.link.values.tolist()
+    #                123456789012345
+    missing_gage = b'               '    
+    check_ids = [ii for ii, gg in zip(all_ids, all_gages) if gg != missing_gage]
+    check_inds = [ii for ii, gg in zip(all_inds, all_gages) if gg != missing_gage]    
+    all_ids_from_gages = rl.routelink.gages_to_ids(all_gages)
+    all_inds_from_gages = rl.routelink.gages_to_inds(all_gages)
+    for ii in range(len(check_inds)):
+        assert all_inds_from_gages[ii] == check_inds[ii]
+        assert all_ids_from_gages[check_inds[ii]] == check_ids[ii]
 
 # ---------------------------------------------------------------------------
 # Get gages from inds
