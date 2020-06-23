@@ -1,6 +1,7 @@
 from datetime import datetime
 from itertools import chain
 import numpy as np
+import pandas as pd
 from typing import Union
 import xarray as xr
 
@@ -12,6 +13,8 @@ class Routelink:
     def __init__(self, xarray_obj):
         self._obj = xarray_obj
         # Check that this is actually a routelink file? dimensions?
+        self.gage_inds = self.inds_to_gages()[0]
+        self.gages = self.inds_to_gages()[1]
 
     def trace_link(
         self,
@@ -150,7 +153,7 @@ class Routelink:
         return outlets
 
     def id_to_gage(self, id_in: int):
-        return self.inds_to_gage(self.id_to_ind(id_in))
+        return self.inds_to_gages(self.ids_to_inds([id_in]))
 
     def ids_to_gages(self, ids_in: list, drop_missing: bool = True):
         ret_val = self.inds_to_gages(
@@ -198,6 +201,11 @@ class Routelink:
             gage_in = list(gage_in)
         elif not isinstance(gage_in, (list, np.ndarray)):
             raise ValueError('Input argument must be np.ndarray, list, or integer.')
+
+        if isinstance(gage_in, np.ndarray):
+            gage_in = gage_in.astype('int')
+        else:
+            gage_in = [int(gg) for gg in gage_in]
 
         # At least vectorize getting the gage-id association
         gage_set = set(gage_in).difference(set([missing_gage]))
@@ -317,6 +325,63 @@ class Routelink:
         }
         return nested_gages
 
+    def gages_dict_to_df(self, key_outlet, value_gage_dict):
+        if len(value_gage_dict) is 0:
+            return(None)
+        re_dict = {k: pd.Series(l) for k, l in value_gage_dict.items()}
+        the_df = (
+            pd.DataFrame(re_dict)
+            .transpose().stack().reset_index())
+        the_df['outlet_ind'] = key_outlet
+        mapper = {
+            'level_0': 'down_ind',
+            'level_1': 'up_count',
+            0: 'up_gage' }
+        the_df = the_df.rename(columns=mapper)
+        the_df['up_count'] += 1
+        return(the_df)
+
+    def get_nested_gages_df(
+            self,
+            gage_inds: list = [],
+            drain_area_name: str = "TotArea"):
+        nested_gages = self.get_nested_gage_inds(gage_inds)
+        gage_df = pd.concat([
+            self.gages_dict_to_df(key, value)
+            for key, value in nested_gages.items()])
+
+        gage_df['down_id'] = (
+            self.inds_to_ids(gage_df.down_ind.values))
+        gage_df['down_gage'] = (
+            self.inds_to_gages(gage_df.down_ind.values)[1])
+        
+        gage_df['up_ind'] = (gage_df.up_gage.values.astype('int'))
+        gage_df['up_id'] = (
+            self.inds_to_ids(gage_df.up_gage.values.astype('int')))
+        gage_df['up_gage'] = (
+            self.inds_to_gages(gage_df.up_ind.values.astype('int'))[1])
+
+        gage_df['outlet_id'] = (
+            self.inds_to_ids(gage_df.outlet_ind.values))
+
+        # Drainage area, if available
+        if drain_area_name in self._obj:
+            gage_df['up_drainage_sqkm'] = (
+                self.inds_to_variable_ds(
+                    gage_df.up_ind.values, var_name=drain_).values)
+            gage_df['down_drainage_sqkm'] = (
+                self.inds_to_variable_ds(
+                    gage_df.down_ind.values, var_name='TotArea').values)
+            gage_df['up_drainage_%'] = (
+                100.0 * gage_df.up_drainage_sqkm/gage_df.down_drainage_sqkm)
+
+        # Final touchups
+        gage_df = gage_df.reset_index().drop(columns='index')
+        gage_df['up_gage'] = gage_df['up_gage'].str.decode("utf-8")
+        gage_df['down_gage'] = gage_df['down_gage'].str.decode("utf-8")
+        return(gage_df)
+
+    
 # # *=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=
 # # Copyright UCAR (c) 2018
 # # University Corporation for Atmospheric Research(UCAR)
