@@ -98,11 +98,27 @@ class PBSCheyenne(Scheduler):
 
             # If first job, schedule using hold
             if job_num == 0:
-                qsub_str += pbs_jids[job_num] + "=`qsub -h " + pbs_scripts[job_num] + "`; "
-            # Else schedule using job dependency on previous pbs jid
+                if jobs[job_num].afterok is None:
+                    qsub_str += (
+                        pbs_jids[job_num] + "=`qsub -h " + pbs_scripts[job_num] + "`; ")
+                else:
+                    qsub_str += (
+                        pbs_jids[job_num] + "=`qsub -W depend=afterok:" +
+                        jobs[job_num].afterok + ' ' +
+                        pbs_scripts[job_num] + "`; ")
+
             else:
-                qsub_str += pbs_jids[job_num] + "=`qsub -W depend=afterok:${" + pbs_jids[
-                    job_num-1] + "} " + pbs_scripts[job_num] + "`; "
+                # Else schedule using job dependency on previous pbs jid
+                if jobs[job_num].afterok is None:
+                    job_afterok = ''
+                else:
+                    job_afterok = jobs[job_num].afterok + ':'
+
+                qsub_str += (
+                    pbs_jids[job_num] + "=`qsub -W depend=afterok:" +
+                    job_afterok +
+                    "${" +pbs_jids[job_num-1] + "} " +
+                    pbs_scripts[job_num] + "`; ")
 
         qsub_str += ' echo $' + pbs_jids[job_num] + '; '
         if self._release:        
