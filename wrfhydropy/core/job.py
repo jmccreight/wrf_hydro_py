@@ -72,6 +72,9 @@ class Job(object):
         self._exit_cmd = exit_cmd
         """str: A command line command to execute after the exe_cmd"""
 
+        self.afterok = afterok
+        """str: a string that can be used by a scheduler to signal job dependence"""
+
         self.job_id = job_id
         """str: The job id."""
 
@@ -97,6 +100,7 @@ class Job(object):
             raise ValueError("restart_file_time is an in appropriate type.")
 
         self.restart_dir = restart_dir
+        """Union[str, pathlib.Path, dict] = None, where to look for restart files"""
         if self.restart_dir is None:
             self._restart_dir_hydro = None
             self._restart_dir_hrldas = None
@@ -108,7 +112,7 @@ class Job(object):
             self._restart_dir_hydro = pathlib.Path(self.restart_file_time['hydro'])
             self._restart_dir_hrldas = pathlib.Path(self.restart_file_time['hrldas'])
         else:
-            raise ValueError("restart_file_time is an in appropriate type.")
+            raise ValueError("restart_dir no of the appropriate type.")
 
         self._model_start_time = pd.to_datetime(model_start_time)
         """np.datetime64: The model time at the start of the execution."""
@@ -194,6 +198,7 @@ class Job(object):
 
         self._job_submission_time = None
         """str?: The time the job object was created."""
+
 
     def _add_hydro_namelist(self, namelist: Namelist):
         """Add a hydro_namelist Namelist object to the job object

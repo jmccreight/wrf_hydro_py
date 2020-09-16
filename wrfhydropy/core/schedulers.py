@@ -98,23 +98,28 @@ class PBSCheyenne(Scheduler):
 
             # If first job, schedule using hold
             if job_num == 0:
-                qsub_str += pbs_jids[job_num] + "=`qsub -h " + pbs_scripts[job_num] + "`;"
+                qsub_str += pbs_jids[job_num] + "=`qsub -h " + pbs_scripts[job_num] + "`; "
             # Else schedule using job dependency on previous pbs jid
             else:
                 qsub_str += pbs_jids[job_num] + "=`qsub -W depend=afterok:${" + pbs_jids[
-                    job_num-1] + "} " + pbs_scripts[job_num] + "`;"
+                    job_num-1] + "} " + pbs_scripts[job_num] + "`; "
 
+        qsub_str += ' echo $' + pbs_jids[job_num] + '; '
         if self._release:        
-            qsub_str += "qrls ${" + pbs_jids[0] + "};"
-
-        adf
+            qsub_str += "qrls ${" + pbs_jids[0] + "}; "
         qsub_str += "'"
 
         # Just for debugging purposes
-        print("qsub_str: ", qsub_str)
+        # print("qsub_str: ", qsub_str)
         # This stacks up dependent jobs in PBS in the same order as the job list
-        subprocess.run(shlex.split(qsub_str),
-                       cwd=str(current_dir))
+        qsub_result = subprocess.run(
+            shlex.split(qsub_str),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            cwd=str(current_dir))
+
+        print(qsub_result.stdout.decode('utf-8'))
+        return(qsub_result.returncode)
 
 
     def _write_job_pbs(self, jobs):

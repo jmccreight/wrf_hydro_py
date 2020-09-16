@@ -147,14 +147,15 @@ class Simulation(object):
         if self.scheduler is None:
             for job in self.jobs:
                 job._run(env=env)
+
+            # Overwrite the object after interactive runs if successfull
+            path = compose_dir.joinpath('WrfHydroSim.pkl')
+            self.pickle(str(path))
+            return int(not all(jj.exit_status == 0 for jj in self.jobs))
+
         else:
             self.scheduler.schedule(jobs=self.jobs)
-
-        # Overwrite the object after run if successfull
-        path = compose_dir.joinpath('WrfHydroSim.pkl')
-        self.pickle(str(path))
-
-        return int(not all(jj.exit_status == 0 for jj in self.jobs))
+            return(0)
 
     def collect(self, sim_dir=None, output=True):
         """Collect simulation output after a run"""
