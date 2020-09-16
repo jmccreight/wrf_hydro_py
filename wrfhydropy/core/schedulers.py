@@ -27,7 +27,8 @@ class PBSCheyenne(Scheduler):
             walltime: str = "12:00:00",
             email_who: str = None,
             email_when: str = 'abe',
-            custom: dict = {}
+            custom: dict = {},
+            release: bool = True
     ):
         """Initialize an PBSCheyenne object.
         Args:
@@ -49,7 +50,8 @@ class PBSCheyenne(Scheduler):
         self._nproc = nproc
         self._nnodes = nnodes
         self._ppn = ppn
-
+        self._release = release
+        
         # Scheduler options dict
         # TODO: Make this more elegant than hard coding for maintenance sake
         self.scheduler_opts = {
@@ -102,7 +104,10 @@ class PBSCheyenne(Scheduler):
                 qsub_str += pbs_jids[job_num] + "=`qsub -W depend=afterok:${" + pbs_jids[
                     job_num-1] + "} " + pbs_scripts[job_num] + "`;"
 
-        qsub_str += "qrls ${" + pbs_jids[0] + "};"
+        if self._release:        
+            qsub_str += "qrls ${" + pbs_jids[0] + "};"
+
+        adf
         qsub_str += "'"
 
         # Just for debugging purposes
@@ -110,6 +115,7 @@ class PBSCheyenne(Scheduler):
         # This stacks up dependent jobs in PBS in the same order as the job list
         subprocess.run(shlex.split(qsub_str),
                        cwd=str(current_dir))
+
 
     def _write_job_pbs(self, jobs):
         """Private method to write bash PBS scripts for submitting each job """

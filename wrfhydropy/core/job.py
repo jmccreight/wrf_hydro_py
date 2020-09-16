@@ -30,7 +30,8 @@ class Job(object):
             restart_dir: Union[str, pathlib.Path, dict] = None,
             exe_cmd: str = None,
             entry_cmd: str = None,
-            exit_cmd: str = None
+            exit_cmd: str = None,
+            afterok: str = None
     ):
 
         """Instatiate a Job object.
