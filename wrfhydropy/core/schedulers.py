@@ -157,10 +157,6 @@ class PBSCheyenne(Scheduler):
 
         for job in jobs:
 
-            from pprint import pprint
-            print(job.__dict__)
-            pprint('in scheduler')
-
             # Copy the job because the exe cmd is edited below
             job = copy.deepcopy(job)
             custom = self.scheduler_opts['custom']
