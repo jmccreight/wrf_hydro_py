@@ -365,6 +365,7 @@ class Job(object):
                 _ = opened_file.write(str(self._model_end_time))
 
         self.pickle(str(self.job_dir.joinpath('WrfHydroJob_postrun.pkl')))
+        return(self.exit_status)
 
     def _write_namelists(self, mode='x'):
         """Private method to write namelist dicts to FORTRAN namelist files"""
@@ -485,34 +486,51 @@ class Job(object):
         else:
             self.job_dir.mkdir()
 
-    def _write_run_script(self):
+    def _write_run_script(self, job_array_range: range = None):
         """Private method to write a python script to run the job. This is used primarily for
         compatibility with job schedulers on HPC systems"""
 
-        self.pickle(str(self.job_dir.joinpath('WrfHydroJob_prerun.pkl')))
+        # from pprint import pprint
+        # print(self.__dict__)
+        # pprint('before pickle')
+        if job_array_range is None:
+            self.pickle(str(self.job_dir /'WrfHydroJob_prerun.pkl'))
+        else:
+            for jj in job_array_range:
+                pkl_path = pathlib.Path('member_' + str(jj).zfill(3)) / (
+                    str(self.job_dir) + '/WrfHydroJob_prerun.pkl')
+                self.pickle(str(pkl_path))
 
         pystr = ""
-        pystr += "# import modules\n"
         pystr += "import wrfhydropy\n"
         pystr += "import pickle\n"
         pystr += "import argparse\n"
         pystr += "import os\n"
         pystr += "import pathlib\n"
-
-        pystr += "# Get path of this script to set working directory\n"
-        pystr += "sim_dir = pathlib.Path(__file__)\n"
-        pystr += "os.chdir(str(sim_dir.parent))\n"
+        pystr += "\n"
 
         pystr += "parser = argparse.ArgumentParser()\n"
-        pystr += "parser.add_argument('--job_id',\n"
-        pystr += "                    help='The numeric part of the scheduler job ID.')\n"
+        pystr += "parser.add_argument(\n"
+        pystr += "    '--job_id',\n"
+        pystr += "    help='The numeric part of the scheduler job ID.')\n"
+        if job_array_range is not None:
+            pystr += "parser.add_argument(\n"
+            pystr += "    '--member',\n"
+            pystr += "    help='The member to run.')\n"
         pystr += "args = parser.parse_args()\n"
         pystr += "\n"
 
-        pystr += "#load job object\n"
+        pystr += "# Get path of this script to set the working directory\n"
+        pystr += "sim_dir = pathlib.Path(__file__).parent\n"
+        if job_array_range is not None:
+            pystr += "sim_dir = sim_dir / ('member_' + str(args.member).zfill(3))\n"
+        pystr += "os.chdir(str(sim_dir))\n"
+        pystr += "\n"
+
+        pystr += "# load job object\n"
         pystr += "job_file = 'job_' + args.job_id + '/WrfHydroJob_prerun.pkl'\n"
         pystr += "job = pickle.load(open(job_file,mode='rb'))\n"
-        pystr += "#Run the job\n"
+        pystr += "# Run the job\n"
         pystr += "job._run()\n"
 
         pystr_file = 'run_job.py'

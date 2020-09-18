@@ -154,8 +154,8 @@ class Simulation(object):
             return int(not all(jj.exit_status == 0 for jj in self.jobs))
 
         else:
-            self.scheduler.schedule(jobs=self.jobs)
-            return(0)
+            return_code = self.scheduler.schedule(jobs=self.jobs)
+            return(return_code)
 
     def collect(self, sim_dir=None, output=True):
         """Collect simulation output after a run"""

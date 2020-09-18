@@ -21,6 +21,7 @@ class PBSCheyenne(Scheduler):
             account: str,
             nproc: int,
             nnodes: int,
+            job_array: bool = False,
             mem: int = None,
             ppn: int = None,
             queue: str = 'regular',
@@ -51,6 +52,7 @@ class PBSCheyenne(Scheduler):
         self._nnodes = nnodes
         self._ppn = ppn
         self._release = release
+        self.job_array = job_array
         
         # Scheduler options dict
         # TODO: Make this more elegant than hard coding for maintenance sake
@@ -64,7 +66,7 @@ class PBSCheyenne(Scheduler):
             'custom': custom
         }
 
-    def schedule(self, jobs: list):
+    def schedule(self, jobs: list, job_array_range: range = None):
         """Schedule one or more jobs using the scheduler scheduler
             Args:
                 jobs: list of jobs to schedule
@@ -80,7 +82,10 @@ class PBSCheyenne(Scheduler):
         # they can't change the order, may not be an issue except for if scheduling fails
         # somewhere
 
-        self._write_job_pbs(jobs=jobs)
+        if self.job_array and job_array_range is None:
+            raise ValueError('self.job_array requested but job_array_range not passed')
+
+        self._write_job_pbs(jobs=jobs, job_array_range=job_array_range)
 
         # Make lists to store pbs scripts and pbs job ids to get previous dependency
         pbs_jids = []
@@ -89,10 +94,11 @@ class PBSCheyenne(Scheduler):
         qsub_str = "/bin/bash -c '"
         for job_num, option in enumerate(jobs):
 
-            # This gets the pbs script name and pbs jid for submission
-            # the obs jid is stored in a list so that the previous jid can be retrieved for
-            # dependency
+            # This gets the pbs script name and pbs jid for submission the obs
+            # jid is stored in a list so that the previous jid can be retrieved
+            # for dependency
             job_id = jobs[job_num].job_id
+
             pbs_scripts.append(str(jobs[job_num].job_dir) + "/job_" + job_id + ".pbs")
             pbs_jids.append("job_" + job_id)
 
@@ -100,7 +106,8 @@ class PBSCheyenne(Scheduler):
             if job_num == 0:
                 if jobs[job_num].afterok is None:
                     qsub_str += (
-                        pbs_jids[job_num] + "=`qsub -h " + pbs_scripts[job_num] + "`; ")
+                        pbs_jids[job_num] + "=`qsub -h " +
+                        pbs_scripts[job_num] + "`; ")
                 else:
                     qsub_str += (
                         pbs_jids[job_num] + "=`qsub -W depend=afterok:" +
@@ -128,6 +135,7 @@ class PBSCheyenne(Scheduler):
         # Just for debugging purposes
         # print("qsub_str: ", qsub_str)
         # This stacks up dependent jobs in PBS in the same order as the job list
+
         qsub_result = subprocess.run(
             shlex.split(qsub_str),
             stdout=subprocess.PIPE,
@@ -138,15 +146,21 @@ class PBSCheyenne(Scheduler):
         return(qsub_result.returncode)
 
 
-    def _write_job_pbs(self, jobs):
+    def _write_job_pbs(self, jobs, job_array_range: range = None):
         """Private method to write bash PBS scripts for submitting each job """
         import copy
         import sys
 
-        # Get the current pytohn executable to handle virtual environments in the scheduler
+        # Get the current python executable to handle virtual environments in
+        # the scheduler
         python_path = sys.executable
 
         for job in jobs:
+
+            from pprint import pprint
+            print(job.__dict__)
+            pprint('in scheduler')
+
             # Copy the job because the exe cmd is edited below
             job = copy.deepcopy(job)
             custom = self.scheduler_opts['custom']
@@ -159,13 +173,16 @@ class PBSCheyenne(Scheduler):
             jobstr += "#PBS -q {0}\n".format(self.scheduler_opts['queue'])
 
             if self.scheduler_opts['email_who'] is not None:
-                jobstr += "#PBS -M {0}\n".format(self.scheduler_opts['email_who'])
-                jobstr += "#PBS -m {0}\n".format(self.scheduler_opts['email_when'])
+                jobstr += "#PBS -M {0}\n".format(
+                    self.scheduler_opts['email_who'])
+                jobstr += "#PBS -m {0}\n".format(
+                    self.scheduler_opts['email_when'])
             jobstr += "\n"
 
             if '-l' not in custom or (
                     '-l' in custom and 'walltime' not in custom['-l']):
-                jobstr += "#PBS -l walltime={0}\n".format(self.scheduler_opts['walltime'])
+                jobstr += "#PBS -l walltime={0}\n".format(
+                    self.scheduler_opts['walltime'])
 
             if '-l' not in custom or (
                     '-l' in custom and 'select' not in custom['-l']):
@@ -182,11 +199,20 @@ class PBSCheyenne(Scheduler):
                 jobstr += "#PBS -l " + custom['-l'] + "\n"
                 jobstr += "\n"
 
-            jobstr += "# Not using PBS standard error and out files to capture model output\n"
-            jobstr += "# but these files might catch output and errors from the scheduler.\n"
+            jobstr += ("# Not using PBS standard error and out files to "
+                       "capture model output\n"
+                       "# but these files might catch output and errors "
+                       "from the scheduler.\n")
             jobstr += "#PBS -o {0}\n".format(job.job_dir)
             jobstr += "#PBS -e {0}\n".format(job.job_dir)
             jobstr += "\n"
+
+            if job_array_range is not None:
+                jobstr += (
+                    "#PBS -J " +
+                    str(job_array_range[0]) + '-' + str(job_array_range[-1]) +
+                    '\n')
+                jobstr += "\n"
 
             # End PBS Header
 
@@ -195,7 +221,8 @@ class PBSCheyenne(Scheduler):
             #    jobstr += 'module load {0}\n'.format(job.modules)
             #    jobstr += "\n"
 
-            jobstr += "# CISL suggests users set TMPDIR when running batch jobs on Cheyenne.\n"
+            jobstr += ("# CISL suggests users set TMPDIR when running "
+                       "batch jobs on Cheyenne.\n")
             jobstr += "export TMPDIR=/glade/scratch/$USER/temp\n"
             jobstr += "mkdir -p $TMPDIR\n"
             jobstr += "\n"
@@ -203,7 +230,13 @@ class PBSCheyenne(Scheduler):
             if self.scheduler_opts['queue'] == 'share':
                 jobstr += "export MPI_USE_ARRAY=false\n"
 
-            jobstr += "{0} run_job.py --job_id {1}\n".format(python_path, job.job_id)
+            jobstr += "{0} run_job.py --job_id {1}".format(
+                python_path, job.job_id)
+            if job_array_range is None:
+                jobstr += "\n"
+            else:
+                jobstr += " --member ${PBS_ARRAY_INDEX}\n"
+
             jobstr += "exit $?\n"
 
             pbs_file = job.job_dir.joinpath("job_" + job.job_id + ".pbs")
@@ -218,10 +251,13 @@ class PBSCheyenne(Scheduler):
                 # regression tests use "{0}" format, try that here too
                 job._exe_cmd = job._exe_cmd.format(self.nproc)
 
-            job._write_run_script()
+            job._write_run_script(job_array_range=job_array_range)
 
     def _solve_nodes_cores(self):
-        """Private method to solve the number of nodes and cores if not all three specified"""
+        """
+        Private method to solve the number of nodes and cores if not
+        all three specified
+        """
 
         import math
 
@@ -233,7 +269,8 @@ class PBSCheyenne(Scheduler):
             self._ppn = math.ceil(self._nproc / self._nnodes)
 
         if None in [self._nproc, self._nnodes, self._ppn]:
-            raise ValueError("Not enough information to solve all of nproc, nnodes, ppn.")
+            raise ValueError(
+                "Not enough information to solve all of nproc, nnodes, ppn.")
 
     @property
     def nproc(self):

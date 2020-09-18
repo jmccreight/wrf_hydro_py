@@ -25,8 +25,12 @@ from .teams import parallel_teams_run, assign_teams
 def parallel_compose_addjobs(arg_dict):
     """Parallelizable function to add jobs to EnsembleSimuation."""
     for jj in arg_dict['jobs']:
-        arg_dict['member'].add(jj)
-    return arg_dict['member']
+        member = arg_dict['member']
+        job = copy.deepcopy(jj)
+        job._add_hydro_namelist(member.base_hydro_namelist)
+        job._add_hrldas_namelist(member.base_hrldas_namelist)
+        member.jobs.append(job)
+    return member
 
 
 def parallel_compose_addscheduler(arg_dict):
@@ -61,15 +65,17 @@ def parallel_run(arg_dict):
 
 # Classes for constructing and running a wrf_hydro simulation
 class EnsembleSimulation(object):
-    """Class for a WRF-Hydro EnsembleSimulation object. The Ensemble Simulation object is used to
-    orchestrate a set of 'N' WRF-Hydro simulations. It requires members with pre-compiled models
-    and there are set and get methods across the ensemble (member_diffs & set_member_diffs). Jobs
-    and scheduler set on the EnsembleSimulation object are set on all the members.
+    """Class for a WRF-Hydro EnsembleSimulation object. The Ensemble Simulation
+       object is used to orchestrate a set of 'N' WRF-Hydro simulations. It
+       requires members with pre-compiled models and there are set and get
+       methods across the ensemble (member_diffs & set_member_diffs). Jobs
+       and scheduler set on the EnsembleSimulation object are set on all the
+       members.
     """
 
     def __init__(
-        self,
-        ncores: int = 1
+            self,
+            ncores: int = 1
     ):
         """ Instantiates an EnsembleSimulation object. """
 
@@ -102,8 +108,8 @@ class EnsembleSimulation(object):
     # 2) member_dir
 
     def add(
-        self,
-        obj: Union[list, Scheduler, Job]
+            self,
+            obj: Union[list, Scheduler, Job]
     ):
         """Add an approparite object to an EnsembleSimulation, such as a Simulation, Job, or
         Scheduler.
@@ -139,8 +145,8 @@ class EnsembleSimulation(object):
         self.jobs.append(job)
 
     def _addsimulation(
-        self,
-        sims: Union[list, Simulation]
+            self,
+            sims: Union[list, Simulation]
     ):
         """Private method to add a Simulation to an EnsembleSimulation
         Args:
@@ -180,9 +186,9 @@ class EnsembleSimulation(object):
 
     # A quick way to setup a basic ensemble from a single sim.
     def replicate_member(
-        self,
-        N: int,
-        copy_members: bool = True
+            self,
+            N: int,
+            copy_members: bool = True
     ):
         if self.N > 1:
             raise ValueError('The ensemble must only have one member to replicate.')
@@ -193,10 +199,10 @@ class EnsembleSimulation(object):
     # -------------------------------------------------------
     # The member_diffs attribute has getter (@property) and setter methods.
     # The get method summarizes all differences across all the attributes of the
-    #   members list attribute and (should) only report member attributes when there
-    #   is at least one difference between members.
-    # The setter method is meant as a convenient way to specify the differences in
-    #   member attributes across the ensemble.
+    #   members list attribute and (should) only report member attributes when
+    #   there is at least one difference between members.
+    # The setter method is meant as a convenient way to specify the differences
+    #   in member attributes across the ensemble.
 
     @property
     def member_diffs(self):
@@ -240,9 +246,9 @@ class EnsembleSimulation(object):
         return(self.__member_diffs)
 
     def set_member_diffs(
-        self,
-        att_tuple: tuple,
-        values: list
+            self,
+            att_tuple: tuple,
+            values: list
     ):
         """Set method for ensemble member differences. (Currently fails silently when
         requested fields are not found.)"""
@@ -282,58 +288,71 @@ class EnsembleSimulation(object):
             update_obj_dict(mem, att_tuple)
 
     def compose(
-        self,
-        symlink_domain: bool = True,
-        force: bool = False,
-        check_nlst_warn: bool = False,
-        rm_members_from_memory: bool = True
+            self,
+            symlink_domain: bool = True,
+            force: bool = False,
+            check_nlst_warn: bool = False,
+            rm_members_from_memory: bool = True
     ):
         """Ensemble compose simulation directories and files
         Args:
             symlink_domain: Symlink the domain files rather than copy
-            force: Compose into directory even if not empty. This is considered bad practice but
-            is necessary in certain circumstances.
-            rm_members_from_memory: Most applications will remove the members from the
-            ensemble object upon compose. Testing and other reasons may keep them around.
-            check_nlst_warn: Allow the namelist checking/validation to only result in warnings.
-            This is also not great practice, but necessary in certain circumstances.
+            force: Compose into directory even if not empty. This is considered
+                bad practice but is necessary in certain circumstances.
+            rm_members_from_memory: Most applications will remove the members
+                from the ensemble object upon compose. Testing and other reasons
+                may keep them around.
+            check_nlst_warn: Allow the namelist checking/validation to only
+                result in warnings. This is also not great practice, but
+                necessary in certain circumstances.
         """
 
         if len(self) < 1:
             raise ValueError("There are no member simulations to compose.")
 
+        # add the jobs to the members
         if self.ncores > 1:
             # Set the pool for the following parallelizable operations
-            with multiprocessing.Pool(processes=self.ncores, initializer=mute) as pool:
+            with multiprocessing.Pool(
+                    processes=self.ncores, initializer=mute) as pool:
 
-                # Set the ensemble jobs on the members before composing (this is a loop
-                # over the jobs).
+                # Set the ensemble jobs on the members before composing (this
+                # is a loop over the jobs).
                 self.members = pool.map(
                     parallel_compose_addjobs,
-                    ({'member': mm, 'jobs': self.jobs} for mm in self.members)
-                )
+                    ({'member': mm, 'jobs': self.jobs} for mm in self.members))
 
                 # Set the ensemble scheduler (not a loop)
+                ## JLM - is this necessary? in any situation? teams or arrays?
                 if self.scheduler is not None:
                     self.members = pool.map(
                         parallel_compose_addscheduler,
-                        ({'member': mm, 'scheduler': self.scheduler} for mm in self.members)
-                    )
+                        ({'member': mm, 'scheduler': self.scheduler}
+                         for mm in self.members) )
 
         else:
             # Set the ensemble jobs on the members before composing (this is a loop
             # over the jobs).
             self.members = [
                 parallel_compose_addjobs({'member': mm, 'jobs': self.jobs})
-                for mm in self.members
-            ]
+                for mm in self.members]
 
             # Set the ensemble scheduler (not a loop)
+            ## JLM - is this necessary? in any situation teams or arrays?
             if self.scheduler is not None:
+
                 self.members = [
-                    parallel_compose_addscheduler({'member': mm, 'scheduler': self.scheduler})
-                    for mm in self.members
-                ]
+                    parallel_compose_addscheduler(
+                        {'member': mm, 'scheduler': self.scheduler})
+                    for mm in self.members ]
+
+        # Critical: set the jobs back after they are properly defined against
+        # the simulations. Take them from just the first member
+        self.jobs = self.members[0].jobs
+        # THis is a hack that works but leaves a misleading job object
+        # in the members' job directory. Could pass a list of lists
+        # to the scheduler... but will leave this until then
+        # self.jobs = [ mm.jobs for mm.jobs in self.members]
 
         # Ensemble compose
         ens_dir = pathlib.Path(os.getcwd())
@@ -341,42 +360,41 @@ class EnsembleSimulation(object):
         ens_dir_files = list(ens_dir.rglob('*'))
         if len(ens_dir_files) > 0 and force is False:
             raise FileExistsError(
-                'Unable to compose ensemble, current working directory is not empty and force '
-                'is False. \nChange working directory to an empty directory with os.chdir()'
-            )
+                'Unable to compose ensemble, current working directory is '
+                'not empty and force is False. \nChange working directory '
+                'to an empty directory with os.chdir()')
 
         if self.ncores > 1:
             with multiprocessing.Pool(processes=self.ncores, initializer=mute) as pool:
                 self.members = pool.map(
                     parallel_compose,
-                    ({
-                        'member': mm,
-                        'ens_dir': ens_dir,
-                        'args': {
-                            'symlink_domain': symlink_domain,
-                            'force': force,
-                            'check_nlst_warn': check_nlst_warn
-                        }
-                    } for mm in self.members)
-                )
+                    ({'member': mm,
+                      'ens_dir': ens_dir,
+                      'args': {
+                          'symlink_domain': symlink_domain,
+                          'force': force,
+                          'check_nlst_warn': check_nlst_warn }}
+                     for mm in self.members))
+
         else:
             # Keep the following for debugging: Run it without pool.map
             self.members = [
                 parallel_compose(
-                    {
-                        'member': mm,
-                        'ens_dir': ens_dir,
-                        'args': {
-                            'symlink_domain': symlink_domain,
-                            'force': force,
-                            'check_nlst_warn': check_nlst_warn
-                        }
-                    }
-                ) for mm in self.members
-            ]
+                    {'member': mm,
+                     'ens_dir': ens_dir,
+                     'args': {
+                         'symlink_domain': symlink_domain,
+                         'force': force,
+                         'check_nlst_warn': check_nlst_warn}})
+                for mm in self.members]
 
         # Return to the ensemble dir.
         os.chdir(ens_dir)
+
+        if self.scheduler is not None and self.scheduler.job_array:
+            print('Making job_array directories...')
+            for job in self.jobs:
+               job._make_job_dir()
 
         # After successful compose, delete the members from memory and replace with
         # their relative dirs, if requested
@@ -388,36 +406,43 @@ class EnsembleSimulation(object):
         run_dirs = [mm.run_dir for mm in self.members]
         self.members = run_dirs
 
-    def restore_members(self, ens_dir: pathlib.Path = None, recursive: bool = True):
+    def restore_members(
+            self,
+            ens_dir: pathlib.Path = None,
+            recursive: bool = True
+    ):
         """Restore members from disk, replace paths with the loaded pickle."""
         if ens_dir is not None:
             self._compose_dir = ens_dir
         if not hasattr(self, '_compose_dir'):
-            raise ValueError('API change: please specify the ens_dir argument '
-                             'to point to the ensemble location using a pathlib.Path.')
+            raise ValueError(
+                'API change: please specify the ens_dir argument '
+                'to point to the ensemble location using a pathlib.Path.')
         if all([isinstance(mm, str) for mm in self.members]):
             member_sims = [
-                pickle.load(self._compose_dir.joinpath(mm + '/WrfHydroSim.pkl').open('rb'))
-                for mm in self.members
-            ]
+                pickle.load(
+                    self
+                    ._compose_dir
+                    .joinpath(mm + '/WrfHydroSim.pkl').open('rb'))
+                for mm in self.members ]
             self.members = member_sims
         if recursive:
             for mm in self.members:
                 mm.restore_sub_objs()
 
     def run(
-        self,
-        n_concurrent: int = 1,
-        teams: bool = False,
-        teams_exe_cmd: str = None,
-        teams_exe_cmd_nproc: int = None,
-        teams_node_file: dict = None,
-        env: dict = None,
-        teams_dict: dict = None
+            self,
+            n_concurrent: int = 1,
+            teams: bool = False,
+            teams_exe_cmd: str = None,
+            teams_exe_cmd_nproc: int = None,
+            teams_node_file: dict = None,
+            env: dict = None,
+            teams_dict: dict = None
     ):
         """Run the ensemble of simulations.
         Inputs:
-            n_concurrent: int = 1, Only used for non-team runs.
+            n_concurrent: int = 1, Only used for non-team and non-jobarray runs.
             teams: bool = False, Use teams? See parallel_teams_run for
                 details.
             teams_exe_cmd: str, The mpi-specific syntax needed. For
@@ -441,59 +466,78 @@ class EnsembleSimulation(object):
         path = pathlib.Path(ens_dir).joinpath('WrfHydroEns.pkl')
         self.pickle(path)
 
-        if teams or teams_dict is not None:
-            if teams_dict is None and teams_exe_cmd is None:
-                raise ValueError("The teams_exe_cmd is required for using teams.")
+        if self.scheduler is not None:
 
-            if teams_dict is None:
-                teams_dict = assign_teams(
-                    self,
-                    teams_exe_cmd=teams_exe_cmd,
-                    teams_exe_cmd_nproc=teams_exe_cmd_nproc,
-                    teams_node_file=teams_node_file,
-                    env=env)
+            # Else when a scheduler is present
+            if self.scheduler.job_array:
+                # Should this just be the default?
+                job_array_range = range(0, len(self))
+                return_code = self.scheduler.schedule(
+                    jobs=self.jobs, job_array_range=job_array_range)
+            else:
+                # JLM TODO: can we do a schedule sequential run when
+                # job_array==FALSE?
+                return_code = self.scheduler.schedule(jobs=self.jobs)
 
-            with multiprocessing.Pool(len(teams_dict), initializer=mute) as pool:
-                exit_codes = pool.map(
-                    parallel_teams_run,
-                    (
-                        {'obj_name': 'members',
-                         'team_dict': team_dict,
-                         'compose_dir': ens_dir,
-                         'env': env}
-                        for (key, team_dict) in teams_dict.items()
-                    )
-                )
-
-            # # Keep around for serial testing/debugging
-            # exit_codes = [
-            #     parallel_teams_run(
-            #         {'obj_name': 'members',
-            #          'team_dict': team_dict,
-            #          'compose_dir': ens_dir,
-            #          'env': env})
-            #     for (key, team_dict) in teams_dict.items()
-            # ]
-
-            exit_code = int(not all([list(ee.values())[0] == 0 for ee in exit_codes]))
-
-        elif n_concurrent > 1:
-
-            with multiprocessing.Pool(n_concurrent, initializer=mute) as pool:
-                exit_codes = pool.map(
-                    parallel_run,
-                    ({'member': mm, 'ens_dir': ens_dir} for mm in self.members)
-                )
-            exit_code = int(not all([ee == 0 for ee in exit_codes]))
+            return(return_code)
 
         else:
 
-            # Keep the following for debugging: Run it without pool.map
-            exit_codes = [
-                parallel_run({'member': mm, 'ens_dir': ens_dir}) for mm in self.members
-            ]
-            exit_code = int(not all([ee == 0 for ee in exit_codes]))
+            if teams or teams_dict is not None:
+                if teams_dict is None and teams_exe_cmd is None:
+                    raise ValueError(
+                        "The teams_exe_cmd is required for using teams.")
 
+                if teams_dict is None:
+                    teams_dict = assign_teams(
+                        self,
+                        teams_exe_cmd=teams_exe_cmd,
+                        teams_exe_cmd_nproc=teams_exe_cmd_nproc,
+                        teams_node_file=teams_node_file,
+                        env=env)
+
+                with multiprocessing.Pool(
+                        len(teams_dict), initializer=mute) as pool:
+                    exit_codes = pool.map(
+                        parallel_teams_run,
+                        ({'obj_name': 'members',
+                          'team_dict': team_dict,
+                          'compose_dir': ens_dir,
+                          'env': env}
+                         for (key, team_dict) in teams_dict.items()))
+
+                # # Keep around for serial testing/debugging
+                # exit_codes = [
+                #     parallel_teams_run(
+                #         {'obj_name': 'members',
+                #          'team_dict': team_dict,
+                #          'compose_dir': ens_dir,
+                #          'env': env})
+                #     for (key, team_dict) in teams_dict.items()
+                # ]
+
+                exit_code = int(
+                    not all([list(ee.values())[0] == 0 for ee in exit_codes]))
+
+            elif n_concurrent > 1:
+
+                with multiprocessing.Pool(
+                        n_concurrent, initializer=mute) as pool:
+                    exit_codes = pool.map(
+                        parallel_run,
+                        ({'member': mm, 'ens_dir': ens_dir}
+                         for mm in self.members))
+                exit_code = int(not all([ee == 0 for ee in exit_codes]))
+
+            else:
+
+                # Keep the following for debugging: Run it without pool.map
+                exit_codes = [
+                    parallel_run({'member': mm, 'ens_dir': ens_dir})
+                    for mm in self.members ]
+                exit_code = int(not all([ee == 0 for ee in exit_codes]))
+
+        # after any run interactive/team/scheduled runs
         os.chdir(ens_dir)
         return exit_code
 
