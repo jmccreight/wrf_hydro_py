@@ -137,13 +137,15 @@ class PBSCheyenne(Scheduler):
         # This stacks up dependent jobs in PBS in the same order as the job list
 
         qsub_result = subprocess.run(
-            shlex.split(qsub_str),
+            # shlex.split(qsub_str),
+            qsub_str,
+            shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             cwd=str(current_dir))
 
         print(qsub_result.stdout.decode('utf-8'))
-        return(qsub_result.returncode)
+        return(qsub_result.stdout.decode('utf-8'))
 
 
     def _write_job_pbs(self, jobs, job_array_range: range = None):

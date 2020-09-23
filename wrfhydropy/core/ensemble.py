@@ -471,7 +471,7 @@ class EnsembleSimulation(object):
             # Else when a scheduler is present
             if self.scheduler.job_array:
                 # Should this just be the default?
-                job_array_range = range(0, len(self))
+                job_array_range = [int(mm[7:]) for mm in self.members]
                 return_code = self.scheduler.schedule(
                     jobs=self.jobs, job_array_range=job_array_range)
             else:

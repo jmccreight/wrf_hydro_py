@@ -118,14 +118,17 @@ def test_schedulers_pbs_schedule(scheduler_regular,capfd):
               entry_cmd='bogus entry cmd',
               exit_cmd='bogus exit cmd')
 
-    try:
-        scheduler_regular.schedule([job, job])
-        out, err = capfd.readouterr()
-        print(out)
-    except:
-        out, err = capfd.readouterr()
-        pass
-    assert out == "qsub_str:  /bin/bash -c 'job_test_job_1=`qsub -h job_test_job_1/job_test_job_1.pbs`;" \
-                  "job_test_job_1=`qsub -W depend=afterok:${job_test_job_1} " \
-                  "job_test_job_1/job_test_job_1.pbs`;qrls ${job_test_job_1};'" \
-                  '\n'
+    #try:
+    zz = scheduler_regular.schedule([job, job])
+    out, err = capfd.readouterr()
+    print(out)
+    #except:
+    out, err = capfd.readouterr()
+    # pass
+
+    assert out == (
+        "qsub_str:  " +
+        "/bin/bash -c 'job_test_job_1=`qsub -h job_test_job_1/job_test_job_1.pbs`;" +
+        "job_test_job_1=`qsub -W depend=afterok:${job_test_job_1} " +
+        "job_test_job_1/job_test_job_1.pbs`;qrls ${job_test_job_1};'" +
+        '\n')
