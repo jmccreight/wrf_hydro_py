@@ -126,7 +126,7 @@ def parallel_teams_run(arg_dict):
             entry_cmds = job._entry_cmd.split(';')
             new_entry_cmd = []
             for cmd in entry_cmds:
-                if 'mpirun' not in cmd:
+                if 'mpi' not in cmd:
                     new_entry_cmd.append(
                         # Switch out the ./wrf_hydro.exe cmd with each command.
                         team_dict['exe_cmd'].format(
@@ -145,7 +145,7 @@ def parallel_teams_run(arg_dict):
             exit_cmds = job._exit_cmd.split(';')
             new_exit_cmd = []
             for cmd in exit_cmds:
-                if 'mpirun' not in cmd:
+                if 'mpi' not in cmd:
                     new_exit_cmd.append(
                         # Switch out the ./wrf_hydro.exe cmd with each command.
                         team_dict['exe_cmd'].format(
